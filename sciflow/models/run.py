@@ -34,6 +34,7 @@ class TaskStatus(StrEnum):
 class Run(BaseModel):
     id: str
     workflow_id: UUID
+    workflow_name: str = ""
     workflow_sha256: str
     status: RunStatus = RunStatus.CREATED
     executor: str = "local"

@@ -14,6 +14,7 @@ SCHEMA = """
 CREATE TABLE IF NOT EXISTS runs (
     id TEXT PRIMARY KEY,
     workflow_id TEXT NOT NULL,
+    workflow_name TEXT NOT NULL DEFAULT '',
     workflow_sha256 TEXT NOT NULL,
     status TEXT NOT NULL,
     executor TEXT NOT NULL,
@@ -85,11 +86,13 @@ class StateStore:
     def create_run(self, run: Run) -> None:
         self._conn.execute(
             "INSERT INTO runs "
-            "(id, workflow_id, workflow_sha256, status, executor, config_json, created_at) "
-            "VALUES (?, ?, ?, ?, ?, ?, ?)",
+            "(id, workflow_id, workflow_name, workflow_sha256, status, "
+            "executor, config_json, created_at) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
             (
                 run.id,
                 str(run.workflow_id),
+                run.workflow_name,
                 run.workflow_sha256,
                 run.status.value,
                 run.executor,

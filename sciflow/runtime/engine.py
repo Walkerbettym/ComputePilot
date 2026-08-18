@@ -49,13 +49,12 @@ class Engine:
         run_dir: str | Path | None = None,
         env: dict[str, str] | None = None,
     ) -> Run:
-        """Execute *workflow* and return the final ``Run`` object."""
         _run_dir = Path(run_dir) if run_dir else Path.cwd() / "runs" / run_id
         _run_dir.mkdir(parents=True, exist_ok=True)
-
         run = Run(
             id=run_id,
             workflow_id=workflow.id,
+            workflow_name=workflow.name,
             workflow_sha256=workflow.sha256,
             status=RunStatus.RUNNING,
             executor=self._executor.name,
@@ -65,7 +64,6 @@ class Engine:
             run_dir=_run_dir,
         )
         self._state.create_run(run)
-
         dag = build_dag(workflow)
         sched = Scheduler(dag, self._max_concurrency)
 
@@ -161,6 +159,7 @@ class Engine:
         run = Run(
             id=run_data["id"],
             workflow_id=run_data["workflow_id"],
+            workflow_name=run_data.get("workflow_name", ""),
             workflow_sha256=run_data["workflow_sha256"],
             status=RunStatus.RESUMING,
             executor=run_data["executor"],
@@ -172,6 +171,7 @@ class Engine:
         self._state.update_run_status(run.id, RunStatus.RUNNING)
 
         _run_dir = Path(run_dir) if run_dir else Path.cwd()
+        _run_dir.mkdir(parents=True, exist_ok=True)
 
         dag = build_dag(workflow)
         sched = Scheduler(dag, self._max_concurrency)
