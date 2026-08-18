@@ -4,13 +4,17 @@ from __future__ import annotations
 
 import asyncio
 import json
-from datetime import UTC, datetime
+import re
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
+from sciflow.agent.diagnosis import Diagnoser, RepairSpec
 from sciflow.models.run import Run, RunStatus, TaskStatus
-from sciflow.models.workflow import Workflow
+from sciflow.models.workflow import Task, Workflow
+from sciflow.policy.engine import PolicyEngine
 from sciflow.runtime.executor import Executor
+from sciflow.runtime.retry import next_delay, should_retry
 from sciflow.runtime.scheduler import Scheduler
 from sciflow.runtime.state import StateStore
 from sciflow.workflow.dag import build_dag
@@ -33,11 +37,16 @@ class Engine:
         executor: Executor,
         max_concurrency: int = 4,
         poll_interval: float = DEFAULT_POLL_INTERVAL,
+        diagnoser: Diagnoser | None = None,
+        policy_engine: PolicyEngine | None = None,
     ) -> None:
         self._state = state
         self._executor = executor
         self._max_concurrency = max_concurrency
         self._poll_interval = poll_interval
+        self._diagnoser = diagnoser or Diagnoser()
+        self._policy_engine = policy_engine or PolicyEngine()
+        self._attempts: dict[str, int] = {}
 
     # -- Public API ------------------------------------------------------------
 
@@ -78,13 +87,18 @@ class Engine:
 
         handles: dict[str, Any] = {}
         running_tasks: dict[str, asyncio.Task[Any]] = {}
+        human_intervention = False
 
         try:
-            while sched.has_pending():
+            while sched.has_pending() and not human_intervention:
                 ready_tasks = sched.ready()
                 for task in ready_tasks:
+                    attempt = self._attempts.get(task.id, 0)
                     self._state.transition_task(
-                        run.id, task.id, TaskStatus.RUNNING, attempt=0
+                        run.id,
+                        task.id,
+                        TaskStatus.RUNNING,
+                        attempt=attempt,
                     )
                     env_full = {**workflow.env, **task.environment, **(env or {})}
                     handle = await self._executor.submit(task, str(_run_dir), env_full)
@@ -103,23 +117,32 @@ class Engine:
                         task_id, result = done_task.result()
                         del running_tasks[task_id]
                         ok = result.ok
-                        final_status = (
-                            TaskStatus.SUCCEEDED if ok else TaskStatus.FAILED
-                        )
-                        self._state.transition_task(
-                            run.id,
-                            task_id,
-                            final_status,
-                            attempt=0,
-                            exit_code=result.exit_code,
-                            error=result.error,
-                        )
-                        sched.done(task_id)
+                        task_obj = self._get_task(workflow, task_id)
+                        if ok:
+                            final_status = TaskStatus.SUCCEEDED
+                            self._state.transition_task(
+                                run.id,
+                                task_id,
+                                final_status,
+                                attempt=self._attempts.get(task_id, 0),
+                                exit_code=result.exit_code,
+                                error=result.error,
+                            )
+                            sched.done(task_id)
+                        else:
+                            human_intervention = await self._handle_failure(
+                                run,
+                                task_obj,
+                                task_id,
+                                result,
+                                sched,
+                            )
                 else:
                     # No tasks in flight and nothing ready — wait then re-check
                     await asyncio.sleep(self._poll_interval)
 
-            run.status = RunStatus.SUCCEEDED
+            if not human_intervention:
+                run.status = RunStatus.SUCCEEDED
         except (Exception, asyncio.CancelledError) as exc:
             run.status = RunStatus.FAILED
             # Cancel any in-flight tasks
@@ -129,15 +152,14 @@ class Engine:
                 await asyncio.gather(*running_tasks.values(), return_exceptions=True)
             # Mark remaining in-flight as failed in state
             for tid in list(running_tasks.keys()):
-                self._state.transition_task(
-                    run.id, tid, TaskStatus.FAILED, error=str(exc)
-                )
+                self._state.transition_task(run.id, tid, TaskStatus.FAILED, error=str(exc))
                 sched.done(tid)
 
         run.finished_at = datetime.now(tz=UTC)
         self._state.update_run_status(run.id, run.status)
 
         return run
+
     async def resume(
         self,
         workflow: Workflow,
@@ -183,17 +205,24 @@ class Engine:
 
         handles: dict[str, Any] = {}
         running_tasks: dict[str, asyncio.Task[Any]] = {}
+        human_intervention = False
 
         try:
-            while sched.has_pending():
+            while sched.has_pending() and not human_intervention:
                 ready_tasks = sched.ready()
                 for task in ready_tasks:
+                    attempt = self._attempts.get(task.id, 0)
                     self._state.transition_task(
-                        run.id, task.id, TaskStatus.RUNNING, attempt=0,
+                        run.id,
+                        task.id,
+                        TaskStatus.RUNNING,
+                        attempt=attempt,
                     )
                     env_full = {**workflow.env, **task.environment, **(env or {})}
                     handle = await self._executor.submit(
-                        task, str(_run_dir), env_full,
+                        task,
+                        str(_run_dir),
+                        env_full,
                     )
                     handles[task.id] = handle
                     running_tasks[task.id] = asyncio.create_task(
@@ -209,53 +238,179 @@ class Engine:
                     for done_task in done_set:
                         task_id, result = done_task.result()
                         del running_tasks[task_id]
-                        final_status = (
-                            TaskStatus.SUCCEEDED if result.ok else TaskStatus.FAILED
-                        )
-                        self._state.transition_task(
-                            run.id,
-                            task_id,
-                            final_status,
-                            attempt=0,
-                            exit_code=result.exit_code,
-                            error=result.error,
-                        )
-                        sched.done(task_id)
+                        task_obj = self._get_task(workflow, task_id)
+                        if result.ok:
+                            self._state.transition_task(
+                                run.id,
+                                task_id,
+                                TaskStatus.SUCCEEDED,
+                                attempt=self._attempts.get(task_id, 0),
+                                exit_code=result.exit_code,
+                                error=result.error,
+                            )
+                            sched.done(task_id)
+                        else:
+                            human_intervention = await self._handle_failure(
+                                run,
+                                task_obj,
+                                task_id,
+                                result,
+                                sched,
+                            )
                 else:
                     await asyncio.sleep(self._poll_interval)
 
-            run.status = RunStatus.SUCCEEDED
+            if not human_intervention:
+                run.status = RunStatus.SUCCEEDED
         except (Exception, asyncio.CancelledError) as exc:
             run.status = RunStatus.FAILED
             for running_task in running_tasks.values():
                 running_task.cancel()
             if running_tasks:
-                await asyncio.gather(
-                    *running_tasks.values(), return_exceptions=True
-                )
+                await asyncio.gather(*running_tasks.values(), return_exceptions=True)
             for tid in list(running_tasks.keys()):
-                self._state.transition_task(
-                    run.id, tid, TaskStatus.FAILED, error=str(exc)
-                )
+                self._state.transition_task(run.id, tid, TaskStatus.FAILED, error=str(exc))
                 sched.done(tid)
 
         run.finished_at = datetime.now(tz=UTC)
         self._state.update_run_status(run.id, run.status)
         return run
 
-
     # -- Internal helpers ------------------------------------------------------
 
-    async def _poll_and_collect(
-        self, task_id: str, handle: Any
-    ) -> tuple[str, Any]:
+    async def _poll_and_collect(self, task_id: str, handle: Any) -> tuple[str, Any]:
         """Poll the executor until the task finishes, then collect the result."""
         while True:
             status = await self._executor.status(handle)
             if status in (
-                TaskStatus.SUCCEEDED, TaskStatus.FAILED,
-                TaskStatus.SKIPPED, TaskStatus.CANCELLED,
+                TaskStatus.SUCCEEDED,
+                TaskStatus.FAILED,
+                TaskStatus.SKIPPED,
+                TaskStatus.CANCELLED,
             ):
                 result = await self._executor.collect(handle)
                 return task_id, result
             await asyncio.sleep(self._poll_interval)
+
+    async def _handle_failure(
+        self,
+        run: Run,
+        task: Task,
+        task_id: str,
+        result: Any,
+        sched: Scheduler,
+    ) -> bool:
+        """Handle a failed task. Returns True if human intervention stops the run."""
+        self._attempts.setdefault(task_id, 0)
+        attempt = self._attempts[task_id]
+
+        # Always diagnose the failure
+        diagnosis = self._diagnoser.diagnose(
+            task_id,
+            exit_code=result.exit_code,
+            stderr=result.stderr_tail or result.error or "",
+        )
+
+        # Record diagnosis event
+        self._state.record_event(
+            run.id,
+            task_id,
+            "diagnosis",
+            payload={
+                "cause": diagnosis.cause,
+                "confidence": diagnosis.confidence,
+                "explanation": diagnosis.explanation,
+                "suggested_action": diagnosis.suggested_action,
+                "repair": {
+                    "action": diagnosis.repair.action,
+                    "params": diagnosis.repair.params,
+                }
+                if diagnosis.repair
+                else None,
+            },
+        )
+
+        can_retry = (
+            should_retry(result, task.retry_policy) and attempt < task.retry_policy.max_attempts - 1
+        )
+
+        # Repair + retry
+        if can_retry and diagnosis.suggested_action == "repair" and diagnosis.repair is not None:
+            self._apply_repair(task, diagnosis.repair)
+            self._attempts[task_id] = attempt + 1
+            self._state.transition_task(
+                run.id,
+                task_id,
+                TaskStatus.RETRYING,
+                attempt=attempt + 1,
+                exit_code=result.exit_code,
+                error=result.error,
+            )
+            delay = next_delay(attempt + 1, task.retry_policy)
+            if delay.total_seconds() > 0:
+                await asyncio.sleep(delay.total_seconds())
+            sched.release(task_id)
+            return False
+
+        # Plain retry (e.g. MISSING_INPUT, NODE_FAIL)
+        if can_retry and diagnosis.suggested_action == "retry":
+            self._attempts[task_id] = attempt + 1
+            self._state.transition_task(
+                run.id,
+                task_id,
+                TaskStatus.RETRYING,
+                attempt=attempt + 1,
+                exit_code=result.exit_code,
+                error=result.error,
+            )
+            delay = next_delay(attempt + 1, task.retry_policy)
+            if delay.total_seconds() > 0:
+                await asyncio.sleep(delay.total_seconds())
+            sched.release(task_id)
+            return False
+
+        # Human / abort or no retry possible — mark as permanently failed
+        self._state.transition_task(
+            run.id,
+            task_id,
+            TaskStatus.FAILED,
+            attempt=attempt,
+            exit_code=result.exit_code,
+            error=result.error,
+        )
+        sched.done(task_id)
+        return diagnosis.suggested_action in ("human", "abort")
+
+    @staticmethod
+    def _get_task(workflow: Workflow, task_id: str) -> Task:
+        """Return the Task object for *task_id* from the workflow."""
+        for t in workflow.tasks:
+            if t.id == task_id:
+                return t
+        msg = f"task {task_id!r} not found in workflow"
+        raise ValueError(msg)
+
+    @staticmethod
+    def _apply_repair(task: Task, repair: RepairSpec) -> None:
+        """Apply a RepairSpec to a Task (mutates task.resources in place)."""
+        if repair.action == "increase_memory":
+            current = task.resources.memory
+            value, unit = Engine._parse_memory(current)
+            factor = float(repair.params.get("factor", 2.0))
+            new_value = max(1, int(value * factor))
+            task.resources.memory = f"{new_value}{unit}"
+        elif repair.action == "increase_walltime":
+            if task.resources.walltime is not None:
+                factor = float(repair.params.get("factor", 1.5))
+                new_seconds = int(task.resources.walltime.total_seconds() * factor)
+                task.resources.walltime = timedelta(seconds=new_seconds)
+
+    @staticmethod
+    def _parse_memory(memory: str) -> tuple[int, str]:
+        """Parse '2GB' → (2, 'GB').  Supports MB/MiB/GB/GiB/TB/TiB."""
+        memory = memory.strip()
+        match = re.match(r"^(\d+)\s*(MB|MiB|GB|GiB|TB|TiB)$", memory)
+        if not match:
+            msg = f"cannot parse memory string: {memory!r}"
+            raise ValueError(msg)
+        return int(match.group(1)), match.group(2)

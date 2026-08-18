@@ -61,6 +61,13 @@ class Scheduler:
         self._completed.add(task_id)
         self._in_flight.discard(task_id)
 
+    def release(self, task_id: str) -> None:
+        """Release *task_id* from in-flight without marking it completed.
+
+        This allows a failed task to be re-queued for retry.
+        """
+        self._in_flight.discard(task_id)
+
     def completed(self) -> set[str]:
         """Return the set of completed task ids."""
         return self._completed.copy()

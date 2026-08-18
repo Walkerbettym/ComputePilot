@@ -164,6 +164,22 @@ class StateStore:
                 ),
             )
 
+    def record_event(
+        self,
+        run_id: str,
+        task_id: str,
+        event: str,
+        payload: dict[str, Any] | None = None,
+    ) -> None:
+        """Record an arbitrary event for a task (e.g. diagnosis)."""
+        now = datetime.now().isoformat()
+        with self._conn:
+            self._conn.execute(
+                "INSERT INTO task_events (run_id, task_id, event, at, payload) "
+                "VALUES (?, ?, ?, ?, ?)",
+                (run_id, task_id, event, now, json.dumps(payload) if payload else None),
+            )
+
     def get_task_state(self, run_id: str, task_id: str) -> TaskStatus | None:
         row = self._conn.execute(
             "SELECT status FROM task_states WHERE run_id = ? AND task_id = ?",
