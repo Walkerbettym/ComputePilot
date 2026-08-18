@@ -61,6 +61,12 @@ class TestFakeSlurmCollect:
         assert result.exit_code == 0
         assert result.error is None
 
+    @pytest.mark.asyncio
+    async def test_collect_records_in_completed(self, fake_slurm: FakeSlurmExecutor) -> None:
+        task = Task(id="test", command="cmd")
+        handle = await fake_slurm.submit(task, run_dir="/tmp", env={})
+        result = await fake_slurm.collect(handle)
+        assert fake_slurm.completed["test"] is result
 
 class TestFakeSlurmCapability:
     """Tests for FakeSlurmExecutor.capability()."""
@@ -102,3 +108,6 @@ class TestFakeSlurmValidate:
         task = Task(id="test", command="cmd")
         errors = fake_slurm.validate_task(task)
         assert errors == []
+
+def test_name() -> None:
+    assert FakeSlurmExecutor.name == "fake_slurm"
