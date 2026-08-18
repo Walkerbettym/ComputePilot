@@ -74,10 +74,9 @@ class DockerExecutor:
 
         # Image and command
         cmd.append(image)
+        cmd.extend(task.command.split())
         if task.args:
             cmd.extend(task.args)
-        else:
-            cmd.extend(task.command.split())
 
         proc = await asyncio.create_subprocess_exec(
             *cmd,
