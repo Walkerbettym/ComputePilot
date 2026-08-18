@@ -17,4 +17,4 @@ jobs:
       - run: ruff check sciflow/ tests/ scripts/
       - run: mypy --strict sciflow/
       - run: python scripts/check_deps.py
-      - run: pytest tests/unit/ --cov=sciflow --cov-fail-under=80
+      - run: pytest tests/unit/ tests/integration/ --cov=sciflow --cov-fail-under=80
