@@ -7,7 +7,6 @@ import sqlite3
 from datetime import datetime
 from pathlib import Path
 from typing import Any
-from typing import Any
 
 from sciflow.models.run import Run, RunStatus, TaskStatus
 
