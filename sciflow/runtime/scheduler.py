@@ -51,6 +51,8 @@ class Scheduler:
         if slot_count <= 0:
             return []
         candidates = self._dag.ready_tasks(self._completed)
+        # Exclude tasks already in-flight
+        candidates = [t for t in candidates if t.id not in self._in_flight]
         ready = candidates[:slot_count]
         for t in ready:
             self._in_flight.add(t.id)

@@ -18,8 +18,45 @@ from sciflow.agent.diagnosis import Diagnoser
 from sciflow.models.run import RunStatus, TaskStatus
 from sciflow.models.workflow import Resources, RetryPolicy, Task, Workflow
 from sciflow.runtime.engine import Engine
-from sciflow.runtime.executor import ExecutorCapability, Handle, TaskResult
+from sciflow.runtime.executor import (
+    DiagnosisHandler,
+    DiagnosisResult,
+    ExecutorCapability,
+    Handle,
+    RepairSpec,
+    TaskResult,
+)
 from sciflow.runtime.state import StateStore
+
+
+class DiagnoserAdapter:
+    """Adapt the agent-layer Diagnoser to the runtime DiagnosisHandler protocol."""
+
+    def __init__(self, diagnoser: Diagnoser) -> None:
+        self._diagnoser = diagnoser
+
+    def diagnose(
+        self,
+        task_id: str,
+        exit_code: int | None = None,
+        stderr: str = "",
+    ) -> DiagnosisResult:
+        d = self._diagnoser.diagnose(task_id, exit_code=exit_code, stderr=stderr)
+        return DiagnosisResult(
+            task_id=d.task_id,
+            cause=d.cause,
+            confidence=d.confidence,
+            explanation=d.explanation,
+            suggested_action=d.suggested_action,
+            repair=RepairSpec(action=d.repair.action, params=d.repair.params)
+            if d.repair
+            else None,
+        )
+
+
+assert isinstance(DiagnoserAdapter, type)
+# Ensure the adapter satisfies the runtime protocol
+_: DiagnosisHandler = DiagnoserAdapter(Diagnoser())
 
 
 class FakeOOMExecutor:
@@ -86,15 +123,15 @@ def executor() -> FakeOOMExecutor:
 
 
 @pytest.fixture
-def diagnosis_handler() -> Diagnoser:
-    return Diagnoser()
+def diagnosis_handler() -> DiagnosisHandler:
+    return DiagnoserAdapter(Diagnoser())
 
 
 @pytest.mark.asyncio
 async def test_oom_diagnose_repair_retry_success(
     store: StateStore,
     executor: FakeOOMExecutor,
-    diagnosis_handler: Diagnoser,
+    diagnosis_handler: DiagnosisHandler,
     tmp_path: Path,
 ) -> None:
     """A task that fails with OOM on first attempt is repaired and retried."""

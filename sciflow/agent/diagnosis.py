@@ -3,16 +3,9 @@
 from __future__ import annotations
 
 import re
-from dataclasses import dataclass, field
-from typing import Any
+from dataclasses import dataclass
 
-
-@dataclass
-class RepairSpec:
-    """A repair action suggested by the diagnoser."""
-
-    action: str
-    params: dict[str, Any] = field(default_factory=dict)
+from sciflow.runtime.executor import RepairSpec
 
 
 @dataclass

@@ -103,7 +103,7 @@ class Engine:
                     handle = await self._executor.submit(task, str(_run_dir), env_full)
                     handles[task.id] = handle
                     running_tasks[task.id] = asyncio.create_task(
-                        self._poll_and_collect(task.id, handle)
+                        self._poll_and_collect(task.id, handle, task)
                     )
 
                 if running_tasks:
@@ -225,7 +225,7 @@ class Engine:
                     )
                     handles[task.id] = handle
                     running_tasks[task.id] = asyncio.create_task(
-                        self._poll_and_collect(task.id, handle)
+                        self._poll_and_collect(task.id, handle, task)
                     )
 
                 if running_tasks:
@@ -277,7 +277,9 @@ class Engine:
 
     # -- Internal helpers ------------------------------------------------------
 
-    async def _poll_and_collect(self, task_id: str, handle: Any) -> tuple[str, Any]:
+    async def _poll_and_collect(
+        self, task_id: str, handle: Any, task: Task | None = None
+    ) -> tuple[str, Any]:
         """Poll the executor until the task finishes, then collect the result."""
         while True:
             status = await self._executor.status(handle)
