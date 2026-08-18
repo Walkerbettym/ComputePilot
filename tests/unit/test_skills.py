@@ -1,10 +1,17 @@
-"""Tests for the skill system."""
+"""Tests for the skill system — Skill model, SkillRegistry, SkillRetriever."""
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
-from sciflow.skills.base import Skill, SkillRegistry
+import pytest
+import yaml
+from pydantic import ValidationError
+
+from sciflow.agent.selector import SkillRetriever
+from sciflow.models.workflow import Resources
+from sciflow.skills.base import ErrorAction, Skill, SkillRegistry
 from sciflow.skills.docker import docker_skill
 from sciflow.skills.python import python_skill
 from sciflow.skills.shell import shell_skill
@@ -26,24 +33,47 @@ class TestSkillModel:
             description="A full skill",
             capabilities=["a", "b"],
             constraints={"key": "val"},
-            error_handling={"err": {"action": "retry", "params": {"n": 3}}},
+            resources_defaults=Resources(cpu=2, memory="4GB"),
+            error_handling={
+                "err": ErrorAction(action="retry", params={"n": 3}),
+            },
         )
         assert skill.name == "full"
         assert skill.version == "1.0.0"
         assert skill.capabilities == ["a", "b"]
         assert skill.constraints["key"] == "val"
-        assert skill.error_handling["err"]["action"] == "retry"
+        assert skill.resources_defaults.cpu == 2
+        assert skill.resources_defaults.memory == "4GB"
+        assert skill.error_handling["err"].action == "retry"
+        assert skill.error_handling["err"].params == {"n": 3}
 
     def test_round_trip_json(self) -> None:
         skill = Skill(
             name="roundtrip",
             capabilities=["run"],
-            error_handling={"fail": {"action": "report", "params": {}}},
+            error_handling={
+                "fail": ErrorAction(action="report", params={}),
+            },
         )
         data = skill.model_dump()
         restored = Skill.model_validate(data)
         assert restored.name == "roundtrip"
         assert restored.capabilities == ["run"]
+        assert restored.error_handling["fail"]["action"] == "report"
+
+    def test_skill_name_required(self) -> None:
+        with pytest.raises(ValidationError):
+            Skill()  # type: ignore[call-arg]
+
+    def test_error_action_minimal(self) -> None:
+        ea = ErrorAction(action="retry")
+        assert ea.action == "retry"
+        assert ea.params == {}
+
+    def test_error_action_full(self) -> None:
+        ea = ErrorAction(action="increase_memory", params={"factor": 2.0})
+        assert ea.action == "increase_memory"
+        assert ea.params == {"factor": 2.0}
 
 
 class TestSkillRegistry:
@@ -59,6 +89,19 @@ class TestSkillRegistry:
         registry.register(Skill(name="a"))
         registry.register(Skill(name="b"))
         assert len(registry.list_all()) == 2
+
+    def test_register_overwrites(self) -> None:
+        registry = SkillRegistry()
+        registry.register(Skill(name="dup", version="1.0.0"))
+        registry.register(Skill(name="dup", version="2.0.0"))
+        assert registry.get("dup") is not None
+        assert registry.get("dup").version == "2.0.0"  # type: ignore[union-attr]
+
+    def test_register_builtins(self) -> None:
+        registry = SkillRegistry()
+        registry.register_builtins()
+        names = {s.name for s in registry.list_all()}
+        assert names == {"python", "shell", "slurm", "docker"}
 
     def test_load_from_yaml(self, tmp_path: Path) -> None:
         yaml_content = """
@@ -84,12 +127,33 @@ error_handling:
         assert skill.capabilities == ["do_thing"]
         assert skill.constraints["x"] == 1
 
+    def test_load_from_path_yaml(self, tmp_path: Path) -> None:
+        path = tmp_path / "skill.yaml"
+        path.write_text(yaml.dump({"name": "from_path", "capabilities": ["run"]}))
+        registry = SkillRegistry()
+        skill = registry.load_from_path(path)
+        assert skill.name == "from_path"
+
+    def test_load_from_path_json(self, tmp_path: Path) -> None:
+        path = tmp_path / "skill.json"
+        path.write_text(json.dumps({"name": "from_json", "capabilities": ["run"]}))
+        registry = SkillRegistry()
+        skill = registry.load_from_path(path)
+        assert skill.name == "from_json"
+
+    def test_load_from_path_unsupported(self, tmp_path: Path) -> None:
+        path = tmp_path / "skill.txt"
+        path.write_text("hello")
+        registry = SkillRegistry()
+        with pytest.raises(ValueError, match="unsupported"):
+            registry.load_from_path(path)
+
 
 class TestBuiltinSkills:
     def test_python_skill(self) -> None:
         assert python_skill.name == "python"
         assert "run_python" in python_skill.capabilities
-        assert "install_packages" in python_skill.capabilities
+        assert "run_script" in python_skill.capabilities
 
     def test_shell_skill(self) -> None:
         assert shell_skill.name == "shell"
@@ -100,6 +164,7 @@ class TestBuiltinSkills:
         assert slurm_skill.name == "slurm"
         assert "submit_batch_job" in slurm_skill.capabilities
         assert "monitor_job" in slurm_skill.capabilities
+        assert "job_failed" in slurm_skill.error_handling
 
     def test_docker_skill(self) -> None:
         assert docker_skill.name == "docker"
@@ -109,8 +174,6 @@ class TestBuiltinSkills:
 
 class TestSkillRetriever:
     def test_retrieve_by_name(self) -> None:
-        from sciflow.agent.selector import SkillRetriever
-
         registry = SkillRegistry()
         registry.register(python_skill)
         registry.register(shell_skill)
@@ -123,8 +186,6 @@ class TestSkillRetriever:
         assert results[0].name == "python"
 
     def test_retrieve_by_description(self) -> None:
-        from sciflow.agent.selector import SkillRetriever
-
         registry = SkillRegistry()
         registry.register(shell_skill)
         retriever = SkillRetriever(registry)
@@ -133,8 +194,6 @@ class TestSkillRetriever:
         assert any(s.name == "shell" for s in results)
 
     def test_retrieve_returns_top_k(self) -> None:
-        from sciflow.agent.selector import SkillRetriever
-
         registry = SkillRegistry()
         registry.register(python_skill)
         registry.register(shell_skill)
@@ -146,8 +205,6 @@ class TestSkillRetriever:
         assert len(results) == 1
 
     def test_retrieve_empty_query(self) -> None:
-        from sciflow.agent.selector import SkillRetriever
-
         registry = SkillRegistry()
         registry.register(python_skill)
         retriever = SkillRetriever(registry)
@@ -156,11 +213,48 @@ class TestSkillRetriever:
         assert len(results) >= 1
 
     def test_retrieve_no_match(self) -> None:
-        from sciflow.agent.selector import SkillRetriever
-
         registry = SkillRegistry()
         registry.register(python_skill)
         retriever = SkillRetriever(registry)
 
         results = retriever.retrieve("zzzunknownzzz", top_k=5)
         assert len(results) == 0
+
+    def test_for_task(self) -> None:
+        registry = SkillRegistry()
+        registry.register_builtins()
+        retriever = SkillRetriever(registry)
+
+        results = retriever.for_task("python")
+        assert len(results) == 1
+        assert results[0].name == "python"
+
+        results = retriever.for_task("slurm")
+        assert len(results) == 1
+        assert results[0].name == "slurm"
+
+    def test_for_capability(self) -> None:
+        registry = SkillRegistry()
+        registry.register_builtins()
+        retriever = SkillRetriever(registry)
+
+        results = retriever.for_capability("run_python")
+        assert len(results) == 1
+        assert results[0].name == "python"
+
+        results = retriever.for_capability("run_shell_command")
+        assert len(results) == 1
+        assert results[0].name == "shell"
+
+    def test_for_capability_no_match(self) -> None:
+        registry = SkillRegistry()
+        registry.register_builtins()
+        retriever = SkillRetriever(registry)
+
+        results = retriever.for_capability("nonexistent_capability")
+        assert results == []
+
+    def test_registry_property(self) -> None:
+        registry = SkillRegistry()
+        retriever = SkillRetriever(registry)
+        assert retriever.registry is registry

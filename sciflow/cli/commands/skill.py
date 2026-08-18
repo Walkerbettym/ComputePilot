@@ -52,7 +52,7 @@ def add_skill(path: str) -> None:
         console.print(f"[red]✗ File not found: {path}[/red]")
         raise typer.Exit(2)
 
-    skill = _registry.load_from_yaml(str(p))
+    skill = _registry.load_from_path(str(p))
     _registry.register(skill)
     msg = f"[green]✓[/green] Registered skill '[bold]{skill.name}[/bold]' ({skill.version})"
     console.print(msg)
