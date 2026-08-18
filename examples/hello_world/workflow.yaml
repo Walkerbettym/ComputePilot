@@ -1,0 +1,5 @@
+name: hello_world
+tasks:
+  - id: greet
+    command: echo "Hello, ComputePilot!"
+    type: shell
