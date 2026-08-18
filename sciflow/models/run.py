@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import UTC, datetime
 from enum import StrEnum
 from pathlib import Path
 from typing import Any
@@ -38,7 +38,7 @@ class Run(BaseModel):
     status: RunStatus = RunStatus.CREATED
     executor: str = "local"
     config: dict[str, Any] = {}
-    created_at: datetime = Field(default_factory=lambda: datetime.now())
+    created_at: datetime = Field(default_factory=lambda: datetime.now(tz=UTC))
     started_at: datetime | None = None
     finished_at: datetime | None = None
     run_dir: Path | None = None

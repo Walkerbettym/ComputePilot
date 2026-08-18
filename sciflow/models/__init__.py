@@ -2,11 +2,12 @@
 
 from sciflow.models.artifact import ArtifactRef, Manifest
 from sciflow.models.run import Run, RunStatus, TaskStatus
-from sciflow.models.workflow import Resources, RetryPolicy, Task, TaskType, Workflow
+from sciflow.models.workflow import PartialTask, Resources, RetryPolicy, Task, TaskType, Workflow
 
 __all__ = [
     "ArtifactRef",
     "Manifest",
+    "PartialTask",
     "Resources",
     "RetryPolicy",
     "Run",

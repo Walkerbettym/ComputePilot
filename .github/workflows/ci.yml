@@ -12,8 +12,9 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
       - run: pip install hatchling pydantic typer rich pyyaml httpx
-      - run: pip install pytest pytest-asyncio ruff mypy
+      - run: pip install -e .
+      - run: pip install pytest pytest-asyncio pytest-cov ruff mypy
       - run: ruff check sciflow/ tests/ scripts/
       - run: mypy --strict sciflow/
       - run: python scripts/check_deps.py
-      - run: pytest tests/unit/ --cov=sciflow
+      - run: pytest tests/unit/ --cov=sciflow --cov-fail-under=80
