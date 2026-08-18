@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import json
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -137,7 +138,111 @@ class Engine:
 
         run.finished_at = datetime.now(tz=UTC)
         self._state.update_run_status(run.id, run.status)
+
         return run
+    async def resume(
+        self,
+        workflow: Workflow,
+        run_id: str,
+        run_dir: str | Path | None = None,
+        env: dict[str, str] | None = None,
+    ) -> Run:
+        """Resume a previously-started run, skipping completed tasks.
+
+        The *workflow* must be the same workflow that was used for the
+        original run.  Completed tasks are loaded from the state store;
+        only unfinished tasks are executed.
+        """
+        run_data = self._state.get_run(run_id)
+        if run_data is None:
+            msg = f"run '{run_id}' not found"
+            raise ValueError(msg)
+
+        run = Run(
+            id=run_data["id"],
+            workflow_id=run_data["workflow_id"],
+            workflow_sha256=run_data["workflow_sha256"],
+            status=RunStatus.RESUMING,
+            executor=run_data["executor"],
+            config=json.loads(run_data["config_json"]),
+            created_at=datetime.fromisoformat(run_data["created_at"]),
+        )
+        run.status = RunStatus.RUNNING
+        run.started_at = datetime.now(tz=UTC)
+        self._state.update_run_status(run.id, RunStatus.RUNNING)
+
+        _run_dir = Path(run_dir) if run_dir else Path.cwd()
+
+        dag = build_dag(workflow)
+        sched = Scheduler(dag, self._max_concurrency)
+
+        # Mark already-completed tasks so the scheduler skips them
+        completed = self._state.get_completed_tasks(run_id)
+        for tid in completed:
+            sched.done(tid)
+
+        handles: dict[str, Any] = {}
+        running_tasks: dict[str, asyncio.Task[Any]] = {}
+
+        try:
+            while sched.has_pending():
+                ready_tasks = sched.ready()
+                for task in ready_tasks:
+                    self._state.transition_task(
+                        run.id, task.id, TaskStatus.RUNNING, attempt=0,
+                    )
+                    env_full = {**workflow.env, **task.environment, **(env or {})}
+                    handle = await self._executor.submit(
+                        task, str(_run_dir), env_full,
+                    )
+                    handles[task.id] = handle
+                    running_tasks[task.id] = asyncio.create_task(
+                        self._poll_and_collect(task.id, handle)
+                    )
+
+                if running_tasks:
+                    done_set, _ = await asyncio.wait(
+                        running_tasks.values(),
+                        return_when=asyncio.FIRST_COMPLETED,
+                        timeout=self._poll_interval,
+                    )
+                    for done_task in done_set:
+                        task_id, result = done_task.result()
+                        del running_tasks[task_id]
+                        final_status = (
+                            TaskStatus.SUCCEEDED if result.ok else TaskStatus.FAILED
+                        )
+                        self._state.transition_task(
+                            run.id,
+                            task_id,
+                            final_status,
+                            attempt=0,
+                            exit_code=result.exit_code,
+                            error=result.error,
+                        )
+                        sched.done(task_id)
+                else:
+                    await asyncio.sleep(self._poll_interval)
+
+            run.status = RunStatus.SUCCEEDED
+        except (Exception, asyncio.CancelledError) as exc:
+            run.status = RunStatus.FAILED
+            for running_task in running_tasks.values():
+                running_task.cancel()
+            if running_tasks:
+                await asyncio.gather(
+                    *running_tasks.values(), return_exceptions=True
+                )
+            for tid in list(running_tasks.keys()):
+                self._state.transition_task(
+                    run.id, tid, TaskStatus.FAILED, error=str(exc)
+                )
+                sched.done(tid)
+
+        run.finished_at = datetime.now(tz=UTC)
+        self._state.update_run_status(run.id, run.status)
+        return run
+
 
     # -- Internal helpers ------------------------------------------------------
 
