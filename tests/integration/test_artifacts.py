@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import json
+from datetime import UTC, datetime
 from pathlib import Path
+from uuid import UUID
 
 from sciflow.artifacts.provenance import ProvenanceBuilder
 from sciflow.artifacts.store import ArtifactStore
@@ -74,11 +76,11 @@ def test_provenance_build_manifest(tmp_path: Path) -> None:
     """build_manifest returns expected structure."""
     run = Run(
         id="test_run",
-        workflow_id="00000000-0000-0000-0000-000000000001",
+        workflow_id=UUID("00000000-0000-0000-0000-000000000001"),
         workflow_name="test_workflow",
         workflow_sha256="abc123",
         status=RunStatus.SUCCEEDED,
-        created_at="2026-01-01T00:00:00",
+        created_at=datetime(2026, 1, 1, 0, 0, 0, tzinfo=UTC),
     )
     builder = ProvenanceBuilder(run)
     manifest = builder.build_manifest()
@@ -96,11 +98,11 @@ def test_provenance_write_manifest(tmp_path: Path) -> None:
     """write_manifest creates a valid JSON file."""
     run = Run(
         id="test_run",
-        workflow_id="00000000-0000-0000-0000-000000000002",
+        workflow_id=UUID("00000000-0000-0000-0000-000000000002"),
         workflow_name="write_test",
         workflow_sha256="def456",
         status=RunStatus.SUCCEEDED,
-        created_at="2026-01-01T00:00:00",
+        created_at=datetime(2026, 1, 1, 0, 0, 0, tzinfo=UTC),
     )
     builder = ProvenanceBuilder(run)
     out = tmp_path / "manifest.json"

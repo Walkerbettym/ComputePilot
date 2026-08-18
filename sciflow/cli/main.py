@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import typer
 
-from sciflow.cli.commands import artifacts, init, logs, report, run, status, validate
+from sciflow.cli.commands import artifacts, init, logs, plan, report, run, status, validate
 
 app = typer.Typer(
     name="sciflow",
@@ -17,6 +17,7 @@ app.command(name="validate")(validate.validate_workflow)
 app.command(name="run")(run.run)
 app.command(name="status")(status.status)
 app.command(name="logs")(logs.logs)
+app.command(name="plan")(plan.plan)
 app.command(name="artifacts")(artifacts.artifacts)
 app.command(name="report")(report.report)
 
