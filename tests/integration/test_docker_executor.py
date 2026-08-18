@@ -140,9 +140,11 @@ async def test_docker_executor_env_vars() -> None:
         pytest.skip("Docker daemon not available")
 
     exe = DockerExecutor()
+    # Use sh -c to ensure shell variable expansion
     task = Task(
         id="docker-env",
-        command="echo $MY_VAR",
+        command="sh",
+        args=["-c", 'echo $MY_VAR'],
         environment={"MY_VAR": "docker_test_value"},
     )
     handle = await exe.submit(task, "/tmp", {})
