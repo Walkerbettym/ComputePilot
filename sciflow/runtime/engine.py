@@ -9,11 +9,10 @@ from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
-from sciflow.agent.diagnosis import Diagnoser, RepairSpec
 from sciflow.models.run import Run, RunStatus, TaskStatus
 from sciflow.models.workflow import Task, Workflow
 from sciflow.policy.engine import PolicyEngine
-from sciflow.runtime.executor import Executor
+from sciflow.runtime.executor import DiagnosisHandler, DiagnosisResult, Executor, RepairSpec
 from sciflow.runtime.retry import next_delay, should_retry
 from sciflow.runtime.scheduler import Scheduler
 from sciflow.runtime.state import StateStore
@@ -37,14 +36,14 @@ class Engine:
         executor: Executor,
         max_concurrency: int = 4,
         poll_interval: float = DEFAULT_POLL_INTERVAL,
-        diagnoser: Diagnoser | None = None,
+        diagnosis_handler: DiagnosisHandler | None = None,
         policy_engine: PolicyEngine | None = None,
     ) -> None:
         self._state = state
         self._executor = executor
         self._max_concurrency = max_concurrency
         self._poll_interval = poll_interval
-        self._diagnoser = diagnoser or Diagnoser()
+        self._diagnosis_handler = diagnosis_handler
         self._policy_engine = policy_engine or PolicyEngine()
         self._attempts: dict[str, int] = {}
 
@@ -305,11 +304,19 @@ class Engine:
         attempt = self._attempts[task_id]
 
         # Always diagnose the failure
-        diagnosis = self._diagnoser.diagnose(
-            task_id,
-            exit_code=result.exit_code,
-            stderr=result.stderr_tail or result.error or "",
-        )
+        if self._diagnosis_handler is not None:
+            diagnosis = self._diagnosis_handler.diagnose(
+                task_id,
+                exit_code=result.exit_code,
+                stderr=result.stderr_tail or result.error or "",
+            )
+        else:
+            diagnosis = DiagnosisResult(
+                task_id=task_id,
+                cause="UNKNOWN",
+                suggested_action="human",
+                explanation="no diagnosis handler configured",
+            )
 
         # Record diagnosis event
         self._state.record_event(

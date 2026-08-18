@@ -86,7 +86,7 @@ def executor() -> FakeOOMExecutor:
 
 
 @pytest.fixture
-def diagnoser() -> Diagnoser:
+def diagnosis_handler() -> Diagnoser:
     return Diagnoser()
 
 
@@ -94,7 +94,7 @@ def diagnoser() -> Diagnoser:
 async def test_oom_diagnose_repair_retry_success(
     store: StateStore,
     executor: FakeOOMExecutor,
-    diagnoser: Diagnoser,
+    diagnosis_handler: Diagnoser,
     tmp_path: Path,
 ) -> None:
     """A task that fails with OOM on first attempt is repaired and retried."""
@@ -116,7 +116,7 @@ async def test_oom_diagnose_repair_retry_success(
         executor=executor,
         max_concurrency=1,
         poll_interval=0.01,
-        diagnoser=diagnoser,
+        diagnosis_handler=diagnosis_handler,
     )
 
     run = await engine.run(workflow, run_id="demo2-oom", run_dir=str(tmp_path))

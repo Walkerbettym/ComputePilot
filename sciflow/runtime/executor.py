@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Protocol, runtime_checkable
+from typing import Any, Protocol, runtime_checkable
 
 from sciflow.models.run import TaskStatus
 from sciflow.models.workflow import Task
@@ -57,3 +57,28 @@ class Executor(Protocol):
     async def cancel(self, handle: Handle) -> None: ...
     async def logs(self, handle: Handle, tail: int = 100) -> str: ...
     async def collect(self, handle: Handle) -> TaskResult: ...
+
+
+@dataclass
+class RepairSpec:
+    """Repair action specification for a failed task."""
+    action: str = ""
+    params: dict[str, Any] = field(default_factory=dict)
+
+
+@dataclass
+class DiagnosisResult:
+    """Result of a failure diagnosis."""
+    task_id: str = ""
+    cause: str = "UNKNOWN"
+    confidence: float = 0.0
+    explanation: str = ""
+    suggested_action: str = "human"
+    repair: RepairSpec | None = None
+
+
+class DiagnosisHandler(Protocol):
+    """Protocol for failure diagnosis handlers."""
+    def diagnose(self, task_id: str, exit_code: int | None,
+                    stderr: str = "") -> DiagnosisResult: ...
+
