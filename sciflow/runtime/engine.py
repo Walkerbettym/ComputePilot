@@ -12,7 +12,13 @@ from typing import Any
 from sciflow.models.run import Run, RunStatus, TaskStatus
 from sciflow.models.workflow import Task, Workflow
 from sciflow.policy.engine import PolicyEngine
-from sciflow.runtime.executor import DiagnosisHandler, DiagnosisResult, Executor, RepairSpec
+from sciflow.runtime.executor import (
+    DiagnosisHandler,
+    DiagnosisResult,
+    Executor,
+    RepairSpec,
+    TaskResult,
+)
 from sciflow.runtime.retry import next_delay, should_retry
 from sciflow.runtime.scheduler import Scheduler
 from sciflow.runtime.state import StateStore
@@ -280,8 +286,30 @@ class Engine:
     async def _poll_and_collect(
         self, task_id: str, handle: Any, task: Task | None = None
     ) -> tuple[str, Any]:
-        """Poll the executor until the task finishes, then collect the result."""
+        """Poll the executor until the task finishes, then collect the result.
+
+        A watch dog ensures tasks that exceed *task.timeout* are cancelled
+        and reported as FAILED.
+        """
+        deadline: datetime | None = None
+        if task is not None and task.timeout is not None:
+            deadline = datetime.now(tz=UTC) + task.timeout
+        else:
+            # Default timeout: 1 hour per task
+            deadline = datetime.now(tz=UTC) + timedelta(hours=1)
+
         while True:
+            if datetime.now(tz=UTC) > deadline:
+                await self._executor.cancel(handle)
+                # Wait a moment for cancellation to take effect
+                await asyncio.sleep(0.5)
+                return task_id, TaskResult(
+                    task_id=task_id,
+                    ok=False,
+                    exit_code=None,
+                    error="task timed out and was cancelled",
+                )
+
             status = await self._executor.status(handle)
             if status in (
                 TaskStatus.SUCCEEDED,
