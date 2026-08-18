@@ -11,6 +11,7 @@ from sciflow.cli.commands import (
     logs,
     plan,
     report,
+    resume,
     run,
     skill,
     status,
@@ -32,6 +33,7 @@ app.command(name="plan")(plan.plan)
 app.command(name="artifacts")(artifacts.artifacts)
 app.command(name="report")(report.report)
 app.command(name="skill")(skill.skill_app)
+app.command(name="resume")(resume.resume)
 app.command(name="cancel")(cancel.cancel)
 
 if __name__ == "__main__":
