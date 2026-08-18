@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from sciflow.skills.base import Skill
+from sciflow.skills.base import ErrorAction, Skill
 
 shell_skill = Skill(
     name="shell",
@@ -19,7 +19,7 @@ shell_skill = Skill(
         "timeout_seconds": 3600,
     },
     error_handling={
-        "non_zero_exit": {"action": "capture_stderr", "params": {"max_retries": 0}},
-        "timeout": {"action": "kill_process", "params": {"signal": "SIGTERM"}},
+        "non_zero_exit": ErrorAction(action="capture_stderr", params={"max_retries": 0}),
+        "timeout": ErrorAction(action="kill_process", params={"signal": "SIGTERM"}),
     },
 )

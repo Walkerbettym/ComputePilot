@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from sciflow.skills.base import Skill
+from sciflow.skills.base import ErrorAction, Skill
 
 slurm_skill = Skill(
     name="slurm",
@@ -20,8 +20,17 @@ slurm_skill = Skill(
         "partition": None,
     },
     error_handling={
-        "job_failed": {"action": "fetch_logs", "params": {"tail_lines": 50}},
-        "node_failure": {"action": "resubmit", "params": {"max_retries": 3, "backoff": "linear"}},
-        "time_limit": {"action": "resubmit", "params": {"max_retries": 1, "extend_time": True}},
+        "job_failed": ErrorAction(
+            action="fetch_logs", params={"tail_lines": 50}
+        ),
+        "node_failure": ErrorAction(
+            action="resubmit",
+            params={"max_retries": 3, "backoff": "linear"},
+        ),
+        "time_limit": ErrorAction(
+            action="resubmit",
+            params={"max_retries": 1, "extend_time": True},
+        ),
     },
 )
+

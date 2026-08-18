@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from sciflow.skills.base import Skill
+from sciflow.skills.base import ErrorAction, Skill
 
 python_skill = Skill(
     name="python",
@@ -19,8 +19,8 @@ python_skill = Skill(
         "requires_pip": True,
     },
     error_handling={
-        "ImportError": {"action": "install_package", "params": {"auto_install": True}},
-        "ModuleNotFoundError": {"action": "install_package", "params": {"auto_install": True}},
-        "SyntaxError": {"action": "report_error", "params": {"detail": "syntax_error"}},
+        "ImportError": ErrorAction(action="install_package", params={"auto_install": True}),
+        "ModuleNotFoundError": ErrorAction(action="install_package", params={"auto_install": True}),
+        "SyntaxError": ErrorAction(action="report_error", params={"detail": "syntax_error"}),
     },
 )
