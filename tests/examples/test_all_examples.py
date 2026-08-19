@@ -99,3 +99,19 @@ class TestExampleExecution:
         assert len(completed) == task_count, (
             f"Example {name}: {len(completed)} completed, expected {task_count}"
         )
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize("name,task_count", [
+        ("1000_genomes", 3),
+    ])
+    async def test_1000_genomes(self, name: str, task_count: int, tmp_path: Path) -> None:
+        """1000 Genomes demo executes successfully."""
+        path = EXAMPLES_DIR / name / "workflow.yaml"
+        assert path.exists(), f"Example {name}: workflow.yaml not found"
+        wf = load_workflow(path)
+        report = validate(wf)
+        assert report.passed, f"Example {name}: validation errors"
+        assert len(wf.tasks) == task_count
+        store = StateStore(tmp_path / f"{name}.db")
+        engine = Engine(state=store, executor=FakeSlurmExecutor(), max_concurrency=task_count)
+        run = await engine.run(wf, run_id=f"ex-{name}", run_dir=str(tmp_path / name))
+        assert run.status == RunStatus.SUCCEEDED

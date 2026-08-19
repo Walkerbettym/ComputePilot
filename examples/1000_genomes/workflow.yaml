@@ -1,0 +1,65 @@
+name: 1000_genomes_analysis
+description: 1000 Genomes population comparison between EUR and AFR on chr22.
+tasks:
+  - id: fetch_data
+    command: python
+    args:
+      - "-c"
+      - |
+        import json, random
+        random.seed(42)
+        pops = {"EUR": ["CEU", "TSI"], "AFR": ["YRI", "LWK"]}
+        samples = {}
+        for pop, codes in pops.items():
+            for code in codes:
+                variants = [{"pos": p, "ref": "A", "alt": "G",
+                           "af": round(random.uniform(0.01, 0.5), 4)}
+                          for p in range(1, 501)]
+                samples[f"{pop}_{code}"] = {"population": pop, "variants": variants}
+        with open("genome_data.json", "w") as f:
+            json.dump({"chr": "22", "samples": samples}, f)
+        print(f"Generated {sum(len(s['variants']) for s in samples.values())} variants")
+    outputs:
+      - genome_data.json
+    environment:
+      SEED: "42"
+  - id: compute_af
+    command: python
+    args:
+      - "-c"
+      - |
+        import json
+        with open("genome_data.json") as f:
+            data = json.load(f)
+        pops = {"EUR": [], "AFR": []}
+        for sid, sample in data["samples"].items():
+            for v in sample["variants"]:
+                pops[sample["population"]].append(v["af"])
+        result = {pop: {"mean_af": round(sum(afs)/len(afs), 4) if afs else 0}
+                 for pop, afs in pops.items()}
+        with open("af.json", "w") as f:
+            json.dump(result, f)
+    depends_on:
+      - fetch_data
+    inputs:
+      - genome_data.json
+    outputs:
+      - af.json
+  - id: report
+    command: python
+    args:
+      - "-c"
+      - |
+        import json
+        with open("af.json") as f:
+            data = json.load(f)
+        eur = data["EUR"]["mean_af"]
+        afr = data["AFR"]["mean_af"]
+        with open("report.json", "w") as f:
+            json.dump({"chr": "22", "eur_af": eur, "afr_af": afr}, f)
+    depends_on:
+      - compute_af
+    inputs:
+      - af.json
+    outputs:
+      - report.json
