@@ -24,12 +24,12 @@ def plan(
         None, "--output", "-o", help="Save workflow YAML to this file"
     ),
     model: str | None = typer.Option(
-        None, "--model", "-m", help="LLM model to use (overrides SCIFLOW_LLM_MODEL)"
+        None, "--model", "-m", help="LLM model to use (overrides COMPUTEPILOT_LLM_MODEL)"
     ),
     show_cost: bool = typer.Option(True, "--cost/--no-cost", help="Show estimated cost"),
 ) -> None:
     """Generate a workflow from a natural language description."""
-    provider_type = os.environ.get("SCIFLOW_LLM_PROVIDER", "openai").lower()
+    provider_type = os.environ.get("COMPUTEPILOT_LLM_PROVIDER", "openai").lower()
 
     if provider_type != "openai":
         console.print(f"[red]Unsupported provider: {provider_type}[/red]")
