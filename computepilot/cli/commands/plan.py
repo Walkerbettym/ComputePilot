@@ -10,7 +10,6 @@ from rich.console import Console
 
 from computepilot.agent.cost import CostEstimator
 from computepilot.agent.generator import WorkflowGenerator
-from computepilot.agent.provider import OpenAIProvider
 from computepilot.workflow.schema import dump_workflow
 
 console = Console()
@@ -27,7 +26,39 @@ def plan(
         None, "--model", "-m", help="LLM model to use (overrides COMPUTEPILOT_LLM_MODEL)"
     ),
     show_cost: bool = typer.Option(True, "--cost/--no-cost", help="Show estimated cost"),
+    interactive: bool = typer.Option(
+        False,
+        "--interactive",
+        "-i",
+        help="Multi-turn conversation with clarification (requires Conductor)",
+    ),
 ) -> None:
+    if interactive:
+        from computepilot.agent.conductor import Conductor
+        from computepilot.agent.provider import OpenAIProvider
+        from computepilot.skills.base import SkillRegistry
+
+        registry = SkillRegistry()
+        registry.register_builtins()
+        cond = Conductor(provider=OpenAIProvider(model=model), registry=registry)
+        sid = cond.new_session()
+        user_input = description
+        rounds = 0
+        while rounds < 10:
+            resp = cond.turn_sync(sid, user_input)
+            console.print(resp.message)
+            if resp.requires_clarification:
+                user_input = typer.prompt("补充")
+            elif resp.phase == "approval":
+                if typer.confirm("批准执行?", default=True):
+                    resp = cond.turn_sync(sid, "yes")
+                    console.print(resp.message)
+                    break
+                user_input = typer.prompt("修改意见")
+            else:
+                break
+            rounds += 1
+        return
     """Generate a workflow from a natural language description."""
     provider_type = os.environ.get("COMPUTEPILOT_LLM_PROVIDER", "openai").lower()
 
