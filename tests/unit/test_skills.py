@@ -172,6 +172,70 @@ class TestBuiltinSkills:
         assert "pull_image" in docker_skill.capabilities
 
 
+class TestSkillVocabulary:
+    """Tests for skill vocabulary resolution (v0.2)."""
+
+    def test_resolve_vocabulary_direct_match(self) -> None:
+        """Direct token resolution works."""
+        skill = Skill(
+            name="genomics",
+            vocabulary_mappings={
+                "population": {"european": "EUR", "african": "AFR"},
+                "region": {"chromosome 22": "chr22", "chromosome 1": "chr1"},
+            },
+        )
+        assert skill.resolve_vocabulary("european") == "EUR"
+        assert skill.resolve_vocabulary("african") == "AFR"
+        assert skill.resolve_vocabulary("chromosome 22") == "chr22"
+
+    def test_resolve_vocabulary_case_insensitive(self) -> None:
+        """Resolution is case-insensitive."""
+        skill = Skill(
+            name="genomics",
+            vocabulary_mappings={"population": {"european": "EUR"}},
+        )
+        assert skill.resolve_vocabulary("European") == "EUR"
+        assert skill.resolve_vocabulary("EUROPEAN") == "EUR"
+
+    def test_resolve_vocabulary_no_match(self) -> None:
+        """Unmatched tokens return None."""
+        skill = Skill(name="genomics", vocabulary_mappings={})
+        assert skill.resolve_vocabulary("nonexistent") is None
+
+    def test_resolve_vocabulary_filtered_field(self) -> None:
+        """Field filter restricts resolution."""
+        skill = Skill(
+            name="genomics",
+            vocabulary_mappings={
+                "population": {"european": "EUR"},
+                "region": {"chromosome 22": "chr22"},
+            },
+        )
+        assert skill.resolve_vocabulary("european", field="region") is None
+        assert skill.resolve_vocabulary("chromosome 22", field="region") == "chr22"
+
+    def test_vocabulary_mappings_yaml_roundtrip(self, tmp_path: Path) -> None:
+        """Skill with vocabulary can be serialized to YAML and back."""
+        skill = Skill(
+            name="genomics",
+            vocabulary_mappings={
+                "population": {"european": "EUR", "african": "AFR"},
+            },
+            parameter_constraints={
+                "chromosomes": {"allowed": ["1", "22"], "required": True},
+            },
+            optimization_strategies=["selective_data_extraction"],
+        )
+        from computepilot.skills.base import Skill as SkillImport
+
+        raw = skill.model_dump()
+        restored = SkillImport.model_validate(raw)
+        assert restored.name == "genomics"
+        assert restored.vocabulary_mappings["population"]["european"] == "EUR"
+        assert restored.parameter_constraints["chromosomes"]["allowed"] == ["1", "22"]
+        assert restored.optimization_strategies == ["selective_data_extraction"]
+
+
 class TestSkillRetriever:
     def test_retrieve_by_name(self) -> None:
         registry = SkillRegistry()

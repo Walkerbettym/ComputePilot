@@ -20,7 +20,12 @@ class ErrorAction(BaseModel):
 
 
 class Skill(BaseModel):
-    """A named capability bundle for a workflow execution environment."""
+    """A named capability bundle for a workflow execution environment.
+
+    Aligned with the paper's knowledge layer: skills encode
+    vocabulary mappings, parameter constraints, and optimization
+    strategies as persistent, auditable artifacts.
+    """
 
     name: str
     version: str = "0.1.0"
@@ -32,6 +37,44 @@ class Skill(BaseModel):
         default_factory=dict,
         description="Mapping of error cause to recovery action and params",
     )
+    # -- Paper-aligned knowledge-layer extensions (v0.2) --
+    vocabulary_mappings: dict[str, dict[str, str]] = Field(
+        default_factory=dict,
+        description=(
+            "Domain vocabulary mappings, e.g. "
+            "{'population': {'european': 'EUR', 'african': 'AFR'}}. "
+            "Natural-language tokens are canonicalized to domain codes."
+        ),
+    )
+    parameter_constraints: dict[str, Any] = Field(
+        default_factory=dict,
+        description=(
+            "Constraints on task parameters, e.g. "
+            "{'chromosomes': {'allowed': ['1', '22'], 'required': True}}."
+        ),
+    )
+    optimization_strategies: list[str] = Field(
+        default_factory=list,
+        description=(
+            "Execution-time optimization hints, e.g. "
+            "['selective_data_extraction', 'parallelism_autotune']."
+        ),
+    )
+
+    def resolve_vocabulary(self, token: str, field: str | None = None) -> str | None:
+        """Resolve a natural-language token to a domain code.
+
+        Returns the matched code if found in ``vocabulary_mappings``,
+        otherwise ``None``.
+        """
+        token_lower = token.strip().lower()
+        for field_name, mappings in self.vocabulary_mappings.items():
+            if field is not None and field_name != field:
+                continue
+            canonical = mappings.get(token_lower)
+            if canonical is not None:
+                return canonical
+        return None
 
 
 class SkillRegistry:
