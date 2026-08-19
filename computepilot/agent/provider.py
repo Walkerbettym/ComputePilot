@@ -68,6 +68,7 @@ class OpenAIProvider:
             headers={
                 "Authorization": f"Bearer {self._api_key}",
                 "Content-Type": "application/json",
+                "User-Agent": "opencode",
             },
             timeout=120,
         )

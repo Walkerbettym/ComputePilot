@@ -99,10 +99,14 @@ class TestExampleExecution:
         assert len(completed) == task_count, (
             f"Example {name}: {len(completed)} completed, expected {task_count}"
         )
+
     @pytest.mark.asyncio
-    @pytest.mark.parametrize("name,task_count", [
-        ("1000_genomes", 3),
-    ])
+    @pytest.mark.parametrize(
+        "name,task_count",
+        [
+            ("1000_genomes", 3),
+        ],
+    )
     async def test_1000_genomes(self, name: str, task_count: int, tmp_path: Path) -> None:
         """1000 Genomes demo executes successfully."""
         path = EXAMPLES_DIR / name / "workflow.yaml"
