@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import hashlib
 import os
 from pathlib import Path
@@ -78,6 +79,11 @@ class LocalExecutor:
         for path in Path(".").glob("*"):
             if path.is_file() and not path.name.startswith("."):
                 outputs[path.name] = hashlib.sha256(path.read_bytes()).hexdigest()
+
+        # Clean up the process reference
+        self._processes.pop(handle.task_id, None)
+        self._handles.pop(handle.task_id, None)
+
         return TaskResult(
             task_id=handle.task_id,
             ok=ok,
@@ -87,3 +93,17 @@ class LocalExecutor:
             error=None if ok else f"exit {proc.returncode}",
             outputs=outputs,
         )
+
+    async def stop(self) -> None:
+        """Cancel all running processes and wait for them to finish.
+
+        Ensures subprocess transports are cleaned up before the
+        event loop closes, preventing "Event loop is closed" warnings.
+        """
+        for tid, proc in list(self._processes.items()):
+            if proc.returncode is None:
+                proc.kill()
+                with contextlib.suppress(TimeoutError, asyncio.CancelledError):
+                    await asyncio.wait_for(proc.wait(), timeout=5.0)
+            self._processes.pop(tid, None)
+            self._handles.pop(tid, None)
