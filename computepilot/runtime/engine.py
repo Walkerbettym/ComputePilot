@@ -430,6 +430,24 @@ class Engine:
             sched.release(task_id)
             return False
 
+        # Plain fallback retry (for when no diagnosis handler is configured,
+        # but the RetryPolicy allows retries — exit codes match, attempts remain)
+        if can_retry:
+            self._attempts[task_id] = attempt + 1
+            self._state.transition_task(
+                run.id,
+                task_id,
+                TaskStatus.RETRYING,
+                attempt=attempt + 1,
+                exit_code=result.exit_code,
+                error=result.error,
+            )
+            delay = next_delay(attempt + 1, task.retry_policy)
+            if delay.total_seconds() > 0:
+                await asyncio.sleep(delay.total_seconds())
+            sched.release(task_id)
+            return False
+
         # Human / abort or no retry possible — mark as permanently failed
         self._state.transition_task(
             run.id,
