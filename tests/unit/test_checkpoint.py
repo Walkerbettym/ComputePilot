@@ -1,4 +1,5 @@
 """Unit tests for checkpoint module edge cases (coverage gap)."""
+
 from __future__ import annotations
 
 import json
@@ -68,7 +69,9 @@ def test_write_checkpoint_outputs_serialized(tmp_path: Path) -> None:
     )
     task = Task(id="t3", command="python")
     result = TaskResult(
-        task_id="t3", ok=True, exit_code=0,
+        task_id="t3",
+        ok=True,
+        exit_code=0,
         outputs={"results.csv": "abcdef123456"},
     )
     path = write_checkpoint(run, task, result)
@@ -82,9 +85,7 @@ def test_recovery_skips_malformed_json(tmp_path: Path) -> None:
     ckpt_dir.mkdir()
 
     # A valid success checkpoint
-    (ckpt_dir / "good.json").write_text(
-        json.dumps({"task_id": "good", "status": "success"})
-    )
+    (ckpt_dir / "good.json").write_text(json.dumps({"task_id": "good", "status": "success"}))
     # A corrupted file
     (ckpt_dir / "bad.json").write_text("{ not valid json")
     # A valid JSON but without status key
