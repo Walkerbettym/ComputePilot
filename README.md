@@ -39,7 +39,7 @@ source .venv/bin/activate
 pip install -e ".[dev]"
 
 # 3. 验证
-sciflow --help
+computepilot --help
 ```
 
 ---
@@ -49,7 +49,7 @@ sciflow --help
 ### 0. 初始化一个工作流项目
 
 ```bash
-sciflow init my_experiment
+computepilot init my_experiment
 cd my_experiment
 ```
 
@@ -67,23 +67,23 @@ tasks:
 ### 1. 校验
 
 ```bash
-sciflow validate workflow.yaml
+computepilot validate workflow.yaml
 # ✓ 校验通过
 ```
 
 ### 2. 运行
 
 ```bash
-sciflow run workflow.yaml
+computepilot run workflow.yaml
 # 确认执行？[Y/n]
 ```
 
 ### 3. 查看状态与日志
 
 ```bash
-sciflow status            # 查看所有运行
-sciflow status <run-id>   # 查看某个运行详情
-sciflow logs <run-id>     # 查看任务事件日志
+computepilot status            # 查看所有运行
+computepilot status <run-id>   # 查看某个运行详情
+computepilot logs <run-id>     # 查看任务事件日志
 ```
 
 ### 4. 从自然语言生成工作流（Agent）
@@ -93,7 +93,7 @@ sciflow logs <run-id>     # 查看任务事件日志
 export SCIFLOW_LLM_API_KEY="sk-..."
 export SCIFLOW_LLM_MODEL="gpt-4o-mini"
 
-sciflow plan "Run a parameter sweep from 1 to 100 with 10 points, use 8 CPUs"
+computepilot plan "Run a parameter sweep from 1 to 100 with 10 points, use 8 CPUs"
 # → 生成 workflow.yaml + 成本估算
 ```
 
@@ -102,15 +102,15 @@ sciflow plan "Run a parameter sweep from 1 to 100 with 10 points, use 8 CPUs"
 如果运行中途被杀，可以恢复：
 
 ```bash
-sciflow resume <run-id>
+computepilot resume <run-id>
 # 从最后一个成功任务继续，不丢已完成、不重复执行
 ```
 
 ### 6. 产物与溯源报告
 
 ```bash
-sciflow artifacts <run-id>   # 列出制品（路径/sha256/大小）
-sciflow report <run-id>      # 生成 report.md + manifest.json（可复现）
+computepilot artifacts <run-id>   # 列出制品（路径/sha256/大小）
+computepilot report <run-id>      # 生成 report.md + manifest.json（可复现）
 ```
 
 ---
@@ -141,17 +141,17 @@ sciflow report <run-id>      # 生成 report.md + manifest.json（可复现）
 
 | 命令 | 作用 |
 |---|---|
-| `sciflow init` | 初始化工作流项目 |
-| `sciflow validate` | 校验 workflow.yaml（24 条规则） |
-| `sciflow run` | 执行工作流（Local/Docker/Slurm） |
-| `sciflow plan` | 从自然语言生成工作流 |
-| `sciflow status` | 查看运行状态 |
-| `sciflow logs` | 查看任务事件日志 |
-| `sciflow resume` | 从检查点恢复 |
-| `sciflow cancel` | 取消运行 |
-| `sciflow artifacts` | 列出制品 |
-| `sciflow report` | 生成溯源报告 |
-| `sciflow skill` | 管理技能注册表 |
+| `cpilot init` | 初始化工作流项目 |
+| `cpilot validate` | 校验 workflow.yaml（24 条规则） |
+| `cpilot run` | 执行工作流（Local/Docker/Slurm） |
+| `cpilot plan` | 从自然语言生成工作流 |
+| `cpilot status` | 查看运行状态 |
+| `cpilot logs` | 查看任务事件日志 |
+| `cpilot resume` | 从检查点恢复 |
+| `cpilot cancel` | 取消运行 |
+| `cpilot artifacts` | 列出制品 |
+| `cpilot report` | 生成溯源报告 |
+| `cpilot skill` | 管理技能注册表 |
 
 ---
 
@@ -159,16 +159,16 @@ sciflow report <run-id>      # 生成 report.md + manifest.json（可复现）
 
 ```bash
 # 类型检查（strict）
-mypy --strict sciflow/
+mypy --strict computepilot/
 
 # 代码风格
-ruff check sciflow/ tests/ scripts/
+ruff check computepilot/ tests/ scripts/
 
 # 依赖方向检查（runtime 不允许 imports agent）
 python scripts/check_deps.py
 
 # 运行全部测试（unit + integration + e2e）
-pytest tests/unit/ tests/integration/ tests/e2e/ --cov=sciflow
+pytest tests/unit/ tests/integration/ tests/e2e/ --cov=computepilot
 ```
 
 CI 每次 push 自动运行上述全部检查（含 coverage ≥ 60%）。

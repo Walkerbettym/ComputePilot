@@ -4,9 +4,9 @@ from __future__ import annotations
 
 from datetime import timedelta
 
-from sciflow.models.workflow import RetryPolicy
-from sciflow.runtime.executor import TaskResult
-from sciflow.runtime.retry import next_delay, should_retry
+from computepilot.models.workflow import RetryPolicy
+from computepilot.runtime.executor import TaskResult
+from computepilot.runtime.retry import next_delay, should_retry
 
 
 class TestShouldRetry:

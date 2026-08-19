@@ -28,12 +28,12 @@ echo ""
 
 # ── Static checks ──────────────────────────────────────────────────────
 echo "─── ruff check ───"
-ruff check sciflow/ tests/ scripts/
+ruff check ComputePilot/ tests/ scripts/
 echo "✓ ruff passed"
 echo ""
 
 echo "─── mypy --strict ───"
-mypy --strict sciflow/
+mypy --strict ComputePilot/
 echo "✓ mypy passed"
 echo ""
 
@@ -46,7 +46,7 @@ echo ""
 echo "─── unit + integration tests ───"
 if $COVERAGE; then
     python -m pytest tests/unit/ tests/integration/ \
-        --cov=sciflow --cov-report=term --cov-report=html
+        --cov=ComputePilot --cov-report=term --cov-report=html
 else
     python -m pytest tests/unit/ tests/integration/ -v
 fi
@@ -56,7 +56,7 @@ echo ""
 echo "─── e2e demo tests ───"
 if $COVERAGE; then
     python -m pytest tests/e2e/ \
-        --cov=sciflow --cov-append --cov-report=term --cov-report=html
+        --cov=ComputePilot --cov-append --cov-report=term --cov-report=html
 else
     python -m pytest tests/e2e/ -v
 fi

@@ -7,10 +7,10 @@ from datetime import UTC, datetime
 from pathlib import Path
 from uuid import UUID
 
-from sciflow.artifacts.provenance import ProvenanceBuilder
-from sciflow.artifacts.store import ArtifactStore
-from sciflow.models.run import Run, RunStatus
-from sciflow.runtime.state import StateStore
+from computepilot.artifacts.provenance import ProvenanceBuilder
+from computepilot.artifacts.store import ArtifactStore
+from computepilot.models.run import Run, RunStatus
+from computepilot.runtime.state import StateStore
 
 # ---------------------------------------------------------------------------
 # ArtifactStore
@@ -126,7 +126,7 @@ def test_provenance_git_detection(tmp_path: Path) -> None:
     # Initialize a git repo in tmp_path
     import subprocess
 
-    from sciflow.artifacts.provenance import ProvenanceBuilder
+    from computepilot.artifacts.provenance import ProvenanceBuilder
 
     subprocess.run(["git", "init"], cwd=tmp_path, capture_output=True)
     subprocess.run(

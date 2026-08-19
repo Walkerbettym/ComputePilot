@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from sciflow.agent.diagnosis import Diagnoser, RepairSpec
+from computepilot.agent.diagnosis import Diagnoser, RepairSpec
 
 
 class TestDiagnoser:
@@ -127,7 +127,7 @@ class TestDiagnosis:
     """Unit tests for the Diagnosis dataclass."""
 
     def test_diagnosis_fields(self) -> None:
-        from sciflow.agent.diagnosis import Diagnosis
+        from computepilot.agent.diagnosis import Diagnosis
 
         diag = Diagnosis(
             task_id="t1",
@@ -144,7 +144,7 @@ class TestDiagnosis:
         assert diag.repair.action == "increase_memory"
 
     def test_diagnosis_no_repair(self) -> None:
-        from sciflow.agent.diagnosis import Diagnosis
+        from computepilot.agent.diagnosis import Diagnosis
 
         diag = Diagnosis(
             task_id="t2",

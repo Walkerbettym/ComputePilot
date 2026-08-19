@@ -15,11 +15,11 @@ from pathlib import Path
 
 import pytest
 
-from sciflow.executors.local import LocalExecutor
-from sciflow.models.run import RunStatus
-from sciflow.models.workflow import Task, Workflow
-from sciflow.runtime.engine import Engine
-from sciflow.runtime.state import StateStore
+from computepilot.executors.local import LocalExecutor
+from computepilot.models.run import RunStatus
+from computepilot.models.workflow import Task, Workflow
+from computepilot.runtime.engine import Engine
+from computepilot.runtime.state import StateStore
 
 
 @pytest.fixture

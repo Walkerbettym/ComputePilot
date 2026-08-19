@@ -14,11 +14,11 @@ from pathlib import Path
 
 import pytest
 
-from sciflow.agent.diagnosis import Diagnoser
-from sciflow.models.run import RunStatus, TaskStatus
-from sciflow.models.workflow import Resources, RetryPolicy, Task, Workflow
-from sciflow.runtime.engine import Engine
-from sciflow.runtime.executor import (
+from computepilot.agent.diagnosis import Diagnoser
+from computepilot.models.run import RunStatus, TaskStatus
+from computepilot.models.workflow import Resources, RetryPolicy, Task, Workflow
+from computepilot.runtime.engine import Engine
+from computepilot.runtime.executor import (
     DiagnosisHandler,
     DiagnosisResult,
     ExecutorCapability,
@@ -26,7 +26,7 @@ from sciflow.runtime.executor import (
     RepairSpec,
     TaskResult,
 )
-from sciflow.runtime.state import StateStore
+from computepilot.runtime.state import StateStore
 
 
 class DiagnoserAdapter:

@@ -14,7 +14,7 @@
 
 ## Global Constraints
 
-1. **Dependency direction (FR-07 enforced):** `sciflow/runtime/` MUST NOT import `sciflow/agent/` or any LLM SDK. CI script `scripts/check_deps.py` enforces this.
+1. **Dependency direction (FR-07 enforced):** `computepilot/runtime/` MUST NOT import `computepilot/agent/` or any LLM SDK. CI script `scripts/check_deps.py` enforces this.
 2. **Python ≥3.11**, managed via `uv` or `pip`.
 3. **Pydantic v2** for all models. Validation errors must include field path.
 4. **mypy strict** mode, **ruff** zero errors — enforced in CI.
@@ -32,7 +32,7 @@
 ### Phase 1 — Workflow Engine (Tasks 1–6)
 
 ```
-sciflow/
+computepilot/
 ├── __init__.py
 ├── models/
 │   ├── __init__.py
@@ -68,17 +68,17 @@ sciflow/
 │   ├── main.py              # Typer app, command dispatch
 │   └── commands/
 │       ├── __init__.py
-│       ├── init.py           # sciflow init
-│       ├── plan.py           # sciflow plan (Phase 4)
-│       ├── validate.py       # sciflow validate
-│       ├── run.py            # sciflow run
-│       ├── status.py         # sciflow status
-│       ├── logs.py           # sciflow logs
-│       ├── resume.py         # sciflow resume
-│       ├── cancel.py        # sciflow cancel
-│       ├── artifacts.py     # sciflow artifacts
-│       ├── report.py        # sciflow report
-│       └── skill.py         # sciflow skill list/add
+│       ├── init.py           # computepilot init
+│       ├── plan.py           # computepilot plan (Phase 4)
+│       ├── validate.py       # computepilot validate
+│       ├── run.py            # computepilot run
+│       ├── status.py         # computepilot status
+│       ├── logs.py           # computepilot logs
+│       ├── resume.py         # computepilot resume
+│       ├── cancel.py        # computepilot cancel
+│       ├── artifacts.py     # computepilot artifacts
+│       ├── report.py        # computepilot report
+│       └── skill.py         # computepilot skill list/add
 ├── agent/
 │   ├── __init__.py
 │   ├── provider.py          # LLMProvider Protocol
@@ -145,11 +145,11 @@ scripts/
 
 **Files:**
 - Create: `pyproject.toml`
-- Create: `sciflow/__init__.py`
-- Create: `sciflow/models/__init__.py`
-- Create: `sciflow/models/workflow.py`
-- Create: `sciflow/models/run.py`
-- Create: `sciflow/models/artifact.py`
+- Create: `computepilot/__init__.py`
+- Create: `computepilot/models/__init__.py`
+- Create: `computepilot/models/workflow.py`
+- Create: `computepilot/models/run.py`
+- Create: `computepilot/models/artifact.py`
 - Create: `tests/conftest.py`
 - Create: `tests/unit/test_models.py`
 - Create: `scripts/check_deps.py`
@@ -180,7 +180,7 @@ dependencies = [
 ]
 
 [project.scripts]
-sciflow = "sciflow.cli.main:app"
+computepilot = "computepilot.cli.main:app"
 
 [tool.ruff]
 line-length = 100
@@ -197,7 +197,7 @@ python_version = "3.11"
 testpaths = ["tests"]
 ```
 
-- [ ] **Step 2: Create `sciflow/models/workflow.py`** — all Pydantic models from spec §8.1–8.2
+- [ ] **Step 2: Create `computepilot/models/workflow.py`** — all Pydantic models from spec §8.1–8.2
 
 ```python
 from __future__ import annotations
@@ -307,7 +307,7 @@ class Workflow(BaseModel):
         return tasks
 ```
 
-- [ ] **Step 3: Create `sciflow/models/run.py`** — Run/TaskStatus state enums
+- [ ] **Step 3: Create `computepilot/models/run.py`** — Run/TaskStatus state enums
 
 ```python
 from __future__ import annotations
@@ -362,7 +362,7 @@ class Run(BaseModel):
 # tests/unit/test_models.py
 import pytest
 from pydantic import ValidationError
-from sciflow.models.workflow import Task, Workflow, Resources, TaskType
+from computepilot.models.workflow import Task, Workflow, Resources, TaskType
 
 def test_task_minimal():
     t = Task(id="hello", command="echo hello")
@@ -406,8 +406,8 @@ import ast
 import sys
 from pathlib import Path
 
-RUNTIME_DIR = Path("sciflow/runtime")
-FORBIDDEN = {"sciflow.agent", "openai", "anthropic", "httpx"}
+RUNTIME_DIR = Path("computepilot/runtime")
+FORBIDDEN = {"computepilot.agent", "openai", "anthropic", "httpx"}
 
 errors = []
 for py_file in RUNTIME_DIR.rglob("*.py"):
@@ -448,16 +448,16 @@ jobs:
           python-version: ${{ matrix.python-version }}
       - run: pip install hatchling pydantic typer rich pyyaml httpx
       - run: pip install pytest pytest-asyncio ruff mypy
-      - run: ruff check sciflow/ tests/ scripts/
-      - run: mypy --strict sciflow/
+      - run: ruff check computepilot/ tests/ scripts/
+      - run: mypy --strict computepilot/
       - run: python scripts/check_deps.py
-      - run: pytest tests/unit/ --cov=sciflow
+      - run: pytest tests/unit/ --cov=computepilot
 ```
 
 - [ ] **Step 7: Run tests and commit**
 
 ```bash
-pip install -e ".[dev]" && ruff check sciflow/ tests/ scripts/ && mypy --strict sciflow/ && python scripts/check_deps.py && pytest tests/unit/ -v
+pip install -e ".[dev]" && ruff check computepilot/ tests/ scripts/ && mypy --strict computepilot/ && python scripts/check_deps.py && pytest tests/unit/ -v
 git add -A && git commit -m "feat: scaffolding + core Pydantic models"
 ```
 
@@ -466,9 +466,9 @@ git add -A && git commit -m "feat: scaffolding + core Pydantic models"
 ### Task 2: Workflow Schema Parser + DAG
 
 **Files:**
-- Create: `sciflow/workflow/__init__.py`
-- Create: `sciflow/workflow/schema.py`
-- Create: `sciflow/workflow/dag.py`
+- Create: `computepilot/workflow/__init__.py`
+- Create: `computepilot/workflow/schema.py`
+- Create: `computepilot/workflow/dag.py`
 - Create: `tests/unit/test_dag.py`
 
 **Interfaces:**
@@ -479,7 +479,7 @@ git add -A && git commit -m "feat: scaffolding + core Pydantic models"
 
 ```python
 from pathlib import Path
-from sciflow.models.workflow import Workflow, Task, PartialTask
+from computepilot.models.workflow import Workflow, Task, PartialTask
 import yaml
 
 def load_workflow(path: str | Path) -> Workflow:
@@ -499,7 +499,7 @@ def dump_workflow(wf: Workflow) -> str:
 
 ```python
 from collections import defaultdict
-from sciflow.models.workflow import Workflow, Task
+from computepilot.models.workflow import Workflow, Task
 
 class DAG:
     def __init__(self, workflow: Workflow):
@@ -572,8 +572,8 @@ class DAG:
 ```python
 # tests/unit/test_dag.py
 import pytest
-from sciflow.models.workflow import Workflow, Task
-from sciflow.workflow.dag import DAG, build_dag
+from computepilot.models.workflow import Workflow, Task
+from computepilot.workflow.dag import DAG, build_dag
 
 def test_topological_order_linear():
     wf = Workflow(name="linear", tasks=[
@@ -633,7 +633,7 @@ git add -A && git commit -m "feat: workflow schema parser + DAG"
 ### Task 3: Validator
 
 **Files:**
-- Create: `sciflow/workflow/validator.py`
+- Create: `computepilot/workflow/validator.py`
 - Create: `tests/unit/test_validator.py`
 
 **Interfaces:**
@@ -644,8 +644,8 @@ git add -A && git commit -m "feat: workflow schema parser + DAG"
 
 ```python
 from dataclasses import dataclass, field
-from sciflow.models.workflow import Workflow, Task, TaskType
-from sciflow.workflow.dag import DAG
+from computepilot.models.workflow import Workflow, Task, TaskType
+from computepilot.workflow.dag import DAG
 
 @dataclass
 class ValidationError:
@@ -731,8 +731,8 @@ def _check_scientific(workflow, report):
 ```python
 # tests/unit/test_validator.py
 import pytest
-from sciflow.models.workflow import Workflow, Task
-from sciflow.workflow.validator import validate, ValidationReport
+from computepilot.models.workflow import Workflow, Task
+from computepilot.workflow.validator import validate, ValidationReport
 
 def test_valid_workflow():
     wf = Workflow(name="test", tasks=[Task(id="a", command="echo hello")])
@@ -797,13 +797,13 @@ git add -A && git commit -m "feat: workflow validator with 24 error codes"
 ### Task 4: Local Executor + Engine Core
 
 **Files:**
-- Create: `sciflow/runtime/__init__.py`
-- Create: `sciflow/runtime/executor.py` (Protocol + TaskResult + Handle)
-- Create: `sciflow/runtime/engine.py`
-- Create: `sciflow/runtime/state.py`
-- Create: `sciflow/runtime/scheduler.py`
-- Create: `sciflow/executors/__init__.py`
-- Create: `sciflow/executors/local.py`
+- Create: `computepilot/runtime/__init__.py`
+- Create: `computepilot/runtime/executor.py` (Protocol + TaskResult + Handle)
+- Create: `computepilot/runtime/engine.py`
+- Create: `computepilot/runtime/state.py`
+- Create: `computepilot/runtime/scheduler.py`
+- Create: `computepilot/executors/__init__.py`
+- Create: `computepilot/executors/local.py`
 - Create: `tests/unit/test_state.py`
 - Create: `tests/integration/test_local_executor.py`
 
@@ -817,7 +817,7 @@ git add -A && git commit -m "feat: workflow validator with 24 error codes"
 from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Protocol
-from sciflow.models.workflow import Task, TaskType
+from computepilot.models.workflow import Task, TaskType
 
 @dataclass
 class ExecutorCapability:
@@ -862,8 +862,8 @@ class Executor(Protocol):
 import asyncio
 import os
 from pathlib import Path
-from sciflow.runtime.executor import Executor, ExecutorCapability, Handle, TaskResult, TaskStatus
-from sciflow.models.workflow import Task, TaskType
+from computepilot.runtime.executor import Executor, ExecutorCapability, Handle, TaskResult, TaskStatus
+from computepilot.models.workflow import Task, TaskType
 import hashlib
 
 class LocalExecutor:
@@ -947,7 +947,7 @@ import json
 import sqlite3
 from datetime import datetime
 from pathlib import Path
-from sciflow.models.run import Run, RunStatus, TaskStatus
+from computepilot.models.run import Run, RunStatus, TaskStatus
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS runs (
@@ -1057,8 +1057,8 @@ class StateStore:
 # tests/integration/test_local_executor.py
 import pytest
 import asyncio
-from sciflow.models.workflow import Task, TaskType
-from sciflow.executors.local import LocalExecutor
+from computepilot.models.workflow import Task, TaskType
+from computepilot.executors.local import LocalExecutor
 
 @pytest.mark.asyncio
 async def test_local_executor_echo():
@@ -1082,30 +1082,30 @@ git add -A && git commit -m "feat: LocalExecutor + engine core + state store"
 
 ---
 
-### Task 5: CLI `sciflow run` + `status` + `logs`
+### Task 5: CLI `computepilot run` + `status` + `logs`
 
 **Files:**
-- Create: `sciflow/cli/__init__.py`
-- Create: `sciflow/cli/main.py`
-- Create: `sciflow/cli/commands/__init__.py`
-- Create: `sciflow/cli/commands/run.py`
-- Create: `sciflow/cli/commands/status.py`
-- Create: `sciflow/cli/commands/logs.py`
-- Create: `sciflow/cli/commands/init.py`
-- Create: `sciflow/cli/commands/validate.py`
-- Create: `sciflow/cli/ui.py`  (rich rendering helpers)
+- Create: `computepilot/cli/__init__.py`
+- Create: `computepilot/cli/main.py`
+- Create: `computepilot/cli/commands/__init__.py`
+- Create: `computepilot/cli/commands/run.py`
+- Create: `computepilot/cli/commands/status.py`
+- Create: `computepilot/cli/commands/logs.py`
+- Create: `computepilot/cli/commands/init.py`
+- Create: `computepilot/cli/commands/validate.py`
+- Create: `computepilot/cli/ui.py`  (rich rendering helpers)
 
 **Interfaces:**
 - Consumes: `Engine`, `StateStore`, `Workflow`, `Validator`, `LocalExecutor` from Tasks 1–4
-- Produces: Complete CLI surface for `sciflow init`, `sciflow validate`, `sciflow run`, `sciflow status`, `sciflow logs`
+- Produces: Complete CLI surface for `computepilot init`, `computepilot validate`, `computepilot run`, `computepilot status`, `computepilot logs`
 
 - [ ] **Step 1: Write `cli/main.py`**
 
 ```python
 import typer
-from sciflow.cli.commands import init, validate, run, status, logs, plan, resume, cancel, artifacts, report, skill
+from computepilot.cli.commands import init, validate, run, status, logs, plan, resume, cancel, artifacts, report, skill
 
-app = typer.Typer(name="sciflow")
+app = typer.Typer(name="computepilot")
 app.command()(init.init)
 app.command()(validate.validate)
 app.command()(run.run)
@@ -1126,11 +1126,11 @@ if __name__ == "__main__":
 ```python
 import typer
 from pathlib import Path
-from sciflow.workflow.schema import load_workflow
-from sciflow.workflow.validator import validate
-from sciflow.runtime.engine import run_workflow
-from sciflow.runtime.state import StateStore
-from sciflow.executors.local import LocalExecutor
+from computepilot.workflow.schema import load_workflow
+from computepilot.workflow.validator import validate
+from computepilot.runtime.engine import run_workflow
+from computepilot.runtime.state import StateStore
+from computepilot.executors.local import LocalExecutor
 from rich.console import Console
 
 console = Console()
@@ -1154,7 +1154,7 @@ def run(
             console.print(f"[red]❌ {err.code}: {err.message}[/red]")
         raise typer.Exit(2)
 
-    store = StateStore(Path.home() / ".local" / "share" / "sciflow" / "state.db")
+    store = StateStore(Path.home() / ".local" / "share" / "computepilot" / "state.db")
     exe = LocalExecutor()
     result = run_workflow(wf, store, exe, max_concurrency=max_concurrency)
     if result.success:
@@ -1164,7 +1164,7 @@ def run(
         raise typer.Exit(1)
 ```
 
-- [ ] **Step 3: Run `sciflow run examples/hello_world/workflow.yaml` end-to-end and commit**
+- [ ] **Step 3: Run `computepilot run examples/hello_world/workflow.yaml` end-to-end and commit**
 
 ```bash
 mkdir -p examples/hello_world
@@ -1175,8 +1175,8 @@ tasks:
     command: echo "Hello, ComputePilot!"
     type: shell
 YAML
-sciflow validate examples/hello_world/workflow.yaml
-sciflow run examples/hello_world/workflow.yaml
+computepilot validate examples/hello_world/workflow.yaml
+computepilot run examples/hello_world/workflow.yaml
 git add -A && git commit -m "feat: CLI run/status/logs + hello_world example"
 ```
 
@@ -1187,10 +1187,10 @@ git add -A && git commit -m "feat: CLI run/status/logs + hello_world example"
 ### Task 6: Checkpoint + Resume
 
 **Files:**
-- Create: `sciflow/runtime/checkpoint.py`
-- Create: `sciflow/runtime/retry.py`
-- Create: `sciflow/cli/commands/resume.py`
-- Modify: `sciflow/runtime/engine.py`
+- Create: `computepilot/runtime/checkpoint.py`
+- Create: `computepilot/runtime/retry.py`
+- Create: `computepilot/cli/commands/resume.py`
+- Modify: `computepilot/runtime/engine.py`
 - Create: `tests/integration/test_resume.py`
 - Create: `tests/unit/test_retry.py`
 
@@ -1204,9 +1204,9 @@ git add -A && git commit -m "feat: CLI run/status/logs + hello_world example"
 import json
 from datetime import datetime
 from pathlib import Path
-from sciflow.models.run import Run
-from sciflow.models.workflow import Task
-from sciflow.runtime.executor import TaskResult
+from computepilot.models.run import Run
+from computepilot.models.workflow import Task
+from computepilot.runtime.executor import TaskResult
 
 def write_checkpoint(run: Run, task: Task, result: TaskResult) -> Path:
     ckpt_dir = Path(run.run_dir) / "checkpoints"
@@ -1240,8 +1240,8 @@ def recovery_point(run_dir: Path) -> set[str]:
 
 ```python
 from datetime import timedelta
-from sciflow.models.workflow import RetryPolicy
-from sciflow.runtime.executor import TaskResult
+from computepilot.models.workflow import RetryPolicy
+from computepilot.runtime.executor import TaskResult
 
 def should_retry(result: TaskResult, policy: RetryPolicy) -> bool:
     if result.ok:
@@ -1267,10 +1267,10 @@ def next_delay(attempt: int, policy: RetryPolicy) -> timedelta:
 import pytest
 import asyncio
 from pathlib import Path
-from sciflow.runtime.checkpoint import write_checkpoint, recovery_point
-from sciflow.models.workflow import Task
-from sciflow.models.run import Run, RunStatus
-from sciflow.runtime.executor import TaskResult
+from computepilot.runtime.checkpoint import write_checkpoint, recovery_point
+from computepilot.models.workflow import Task
+from computepilot.models.run import Run, RunStatus
+from computepilot.runtime.executor import TaskResult
 
 def test_checkpoint_roundtrip(tmp_path):
     run = Run(id="test-run", workflow_sha256="abc", status=RunStatus.RUNNING, run_dir=tmp_path)
@@ -1306,16 +1306,16 @@ git add -A && git commit -m "feat: checkpoint + resume + retry"
 ### Task 7: Artifact Store + Provenance + Report
 
 **Files:**
-- Create: `sciflow/artifacts/__init__.py`
-- Create: `sciflow/artifacts/store.py`
-- Create: `sciflow/artifacts/provenance.py`
-- Create: `sciflow/cli/commands/artifacts.py`
-- Create: `sciflow/cli/commands/report.py`
+- Create: `computepilot/artifacts/__init__.py`
+- Create: `computepilot/artifacts/store.py`
+- Create: `computepilot/artifacts/provenance.py`
+- Create: `computepilot/cli/commands/artifacts.py`
+- Create: `computepilot/cli/commands/report.py`
 - Create: `tests/integration/test_artifacts.py`
 
 **Interfaces:**
 - Consumes: `StateStore`, `TaskResult`, `Run` from Tasks 1–6
-- Produces: `ArtifactStore.register()`, `ProvenanceBuilder.build_manifest()`, `sciflow artifacts`, `sciflow report`
+- Produces: `ArtifactStore.register()`, `ProvenanceBuilder.build_manifest()`, `computepilot artifacts`, `computepilot report`
 
 - [ ] **Step 1: Write `store.py`**
 
@@ -1323,7 +1323,7 @@ git add -A && git commit -m "feat: checkpoint + resume + retry"
 import hashlib
 from pathlib import Path
 from datetime import datetime
-from sciflow.runtime.state import StateStore
+from computepilot.runtime.state import StateStore
 
 class ArtifactStore:
     def __init__(self, state: StateStore):
@@ -1348,7 +1348,7 @@ class ArtifactStore:
 import json
 from datetime import datetime
 from pathlib import Path
-from sciflow.models.run import Run
+from computepilot.models.run import Run
 
 class ProvenanceBuilder:
     def __init__(self, run: Run):
@@ -1396,8 +1396,8 @@ git add -A && git commit -m "feat: artifact store + provenance + report"
 ### Task 8: Docker Executor
 
 **Files:**
-- Create: `sciflow/executors/docker.py`
-- Modify: `sciflow/cli/commands/run.py` (add --executor flag)
+- Create: `computepilot/executors/docker.py`
+- Modify: `computepilot/cli/commands/run.py` (add --executor flag)
 - Create: `tests/integration/test_docker_executor.py`
 
 **Interfaces:**
@@ -1411,8 +1411,8 @@ import asyncio
 import json
 import os
 from pathlib import Path
-from sciflow.runtime.executor import Executor, ExecutorCapability, Handle, TaskResult, TaskStatus
-from sciflow.models.workflow import Task, TaskType
+from computepilot.runtime.executor import Executor, ExecutorCapability, Handle, TaskResult, TaskStatus
+from computepilot.models.workflow import Task, TaskType
 
 class DockerExecutor:
     name = "docker"
@@ -1469,8 +1469,8 @@ git add -A && git commit -m "feat: DockerExecutor"
 ### Task 9: Slurm Executor + FakeSlurm
 
 **Files:**
-- Create: `sciflow/executors/slurm.py`
-- Create: `sciflow/executors/fake_slurm.py`
+- Create: `computepilot/executors/slurm.py`
+- Create: `computepilot/executors/fake_slurm.py`
 - Create: `tests/unit/test_fake_slurm.py`
 
 **Interfaces:**
@@ -1482,8 +1482,8 @@ git add -A && git commit -m "feat: DockerExecutor"
 ```python
 import asyncio
 from pathlib import Path
-from sciflow.runtime.executor import ExecutorCapability, Handle, TaskResult, TaskStatus
-from sciflow.models.workflow import Task
+from computepilot.runtime.executor import ExecutorCapability, Handle, TaskResult, TaskStatus
+from computepilot.models.workflow import Task
 
 class FakeSlurmExecutor:
     """Records calls for CI testing; no actual Slurm dependency."""
@@ -1512,8 +1512,8 @@ class FakeSlurmExecutor:
 import asyncio
 import os
 from pathlib import Path
-from sciflow.runtime.executor import Executor, ExecutorCapability, Handle, TaskResult, TaskStatus
-from sciflow.models.workflow import Task, TaskType
+from computepilot.runtime.executor import Executor, ExecutorCapability, Handle, TaskResult, TaskStatus
+from computepilot.models.workflow import Task, TaskType
 
 class SlurmExecutor:
     name = "slurm"
@@ -1564,18 +1564,18 @@ git add -A && git commit -m "feat: SlurmExecutor + FakeSlurm for CI"
 ### Task 10: LLM Provider + Intent + Planner
 
 **Files:**
-- Create: `sciflow/agent/__init__.py`
-- Create: `sciflow/agent/provider.py`
-- Create: `sciflow/agent/intent.py`
-- Create: `sciflow/agent/planner.py`
-- Create: `sciflow/agent/generator.py`
-- Create: `sciflow/agent/cost.py`
-- Create: `sciflow/cli/commands/plan.py`
+- Create: `computepilot/agent/__init__.py`
+- Create: `computepilot/agent/provider.py`
+- Create: `computepilot/agent/intent.py`
+- Create: `computepilot/agent/planner.py`
+- Create: `computepilot/agent/generator.py`
+- Create: `computepilot/agent/cost.py`
+- Create: `computepilot/cli/commands/plan.py`
 - Create: `tests/unit/test_intent.py`
 
 **Interfaces:**
 - Consumes: `Workflow`, `Intent`, `Skill` models from Tasks 1–3
-- Produces: `LLMProvider(Protocol)`, `IntentExtractor`, `Planner`, `WorkflowGenerator`, `CostEstimator`, `sciflow plan`
+- Produces: `LLMProvider(Protocol)`, `IntentExtractor`, `Planner`, `WorkflowGenerator`, `CostEstimator`, `computepilot plan`
 
 - [ ] **Step 1: Write `provider.py`**
 
@@ -1607,7 +1607,7 @@ class OpenAIProvider:
 
 ```python
 from pydantic import BaseModel, Field
-from sciflow.agent.provider import LLMProvider
+from computepilot.agent.provider import LLMProvider
 
 class Intent(BaseModel):
     verb: str = Field(description="sweep/train/simulate/analyze")
@@ -1641,26 +1641,26 @@ git add -A && git commit -m "feat: LLM provider + intent extractor + planner"
 ### Task 11: Skill Registry + Workflow Generator
 
 **Files:**
-- Create: `sciflow/skills/__init__.py`
-- Create: `sciflow/skills/base.py`
-- Create: `sciflow/skills/python.py`
-- Create: `sciflow/skills/shell.py`
-- Create: `sciflow/skills/slurm.py`
-- Create: `sciflow/skills/docker.py`
-- Create: `sciflow/agent/selector.py`
-- Create: `sciflow/cli/commands/skill.py`
+- Create: `computepilot/skills/__init__.py`
+- Create: `computepilot/skills/base.py`
+- Create: `computepilot/skills/python.py`
+- Create: `computepilot/skills/shell.py`
+- Create: `computepilot/skills/slurm.py`
+- Create: `computepilot/skills/docker.py`
+- Create: `computepilot/agent/selector.py`
+- Create: `computepilot/cli/commands/skill.py`
 - Create: `tests/unit/test_skills.py`
 
 **Interfaces:**
 - Consumes: `Skill` model, `Workflow` model from Tasks 1, 2
-- Produces: `SkillRegistry`, `SkillRetriever`, `sciflow skill list/add`
+- Produces: `SkillRegistry`, `SkillRetriever`, `computepilot skill list/add`
 
 - [ ] **Step 1: Write `skills/base.py`**
 
 ```python
 from pydantic import BaseModel, Field
 from pathlib import Path
-from sciflow.models.workflow import Resources
+from computepilot.models.workflow import Resources
 
 class ErrorAction(BaseModel):
     action: str
@@ -1703,10 +1703,10 @@ git add -A && git commit -m "feat: skill registry + workflow generator"
 ### Task 12: Failure Diagnosis + Policy Engine
 
 **Files:**
-- Create: `sciflow/agent/diagnosis.py`
-- Create: `sciflow/policy/__init__.py`
-- Create: `sciflow/policy/engine.py`
-- Create: `sciflow/cli/commands/cancel.py`
+- Create: `computepilot/agent/diagnosis.py`
+- Create: `computepilot/policy/__init__.py`
+- Create: `computepilot/policy/engine.py`
+- Create: `computepilot/cli/commands/cancel.py`
 - Create: `tests/unit/test_diagnosis.py`
 - Create: `tests/unit/test_policy.py`
 
@@ -1718,7 +1718,7 @@ git add -A && git commit -m "feat: skill registry + workflow generator"
 
 ```python
 from dataclasses import dataclass, field
-from sciflow.runtime.executor import TaskResult
+from computepilot.runtime.executor import TaskResult
 
 @dataclass
 class RepairSpec:
@@ -1801,7 +1801,7 @@ git add -A && git commit -m "feat: failure diagnosis + policy engine"
 ### Task 13: Auto-repair Pipeline + Demo 2
 
 **Files:**
-- Modify: `sciflow/runtime/engine.py` (integrate diagnosis + repair)
+- Modify: `computepilot/runtime/engine.py` (integrate diagnosis + repair)
 - Create: `tests/e2e/test_demo_2.py` (OOM → diagnose → repair → retry → success)
 
 **Interfaces:**
@@ -1815,11 +1815,11 @@ git add -A && git commit -m "feat: failure diagnosis + policy engine"
 import pytest
 import asyncio
 from pathlib import Path
-from sciflow.models.workflow import Workflow, Task, Resources, RetryPolicy
-from sciflow.runtime.state import StateStore
-from sciflow.executors.local import LocalExecutor
-from sciflow.agent.diagnosis import Diagnoser
-from sciflow.policy.engine import PolicyEngine
+from computepilot.models.workflow import Workflow, Task, Resources, RetryPolicy
+from computepilot.runtime.state import StateStore
+from computepilot.executors.local import LocalExecutor
+from computepilot.agent.diagnosis import Diagnoser
+from computepilot.policy.engine import PolicyEngine
 
 @pytest.mark.asyncio
 async def test_demo_2_oom_repair(tmp_path):
@@ -1870,9 +1870,9 @@ git add -A && git commit -m "feat: auto-repair pipeline + Demo 2 e2e test"
 # tests/e2e/test_demo_1.py
 import pytest
 from pathlib import Path
-from sciflow.models.workflow import Workflow, Task
-from sciflow.workflow.validator import validate
-from sciflow.workflow.schema import load_workflow
+from computepilot.models.workflow import Workflow, Task
+from computepilot.workflow.validator import validate
+from computepilot.workflow.schema import load_workflow
 
 def test_demo_1_parameter_sweep():
     """Parameter sweep 1→100 with 50 points → 50 jobs → collect → analyze → plot."""
@@ -1934,11 +1934,11 @@ def test_demo_4_reproducibility():
 #!/bin/bash
 set -e
 echo "=== ComputePilot Demo 1: Parameter Sweep ==="
-sciflow validate examples/parameter_sweep/workflow.yaml
-sciflow run examples/parameter_sweep/workflow.yaml --max-concurrency 10
+computepilot validate examples/parameter_sweep/workflow.yaml
+computepilot run examples/parameter_sweep/workflow.yaml --max-concurrency 10
 echo "✅ Demo 1 complete"
 echo "=== ComputePilot Demo 3: Resume ==="
-sciflow resume experiment-$(date +%Y-%m-%d)-001
+computepilot resume experiment-$(date +%Y-%m-%d)-001
 echo "✅ Demo 3 complete"
 ```
 

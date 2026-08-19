@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from sciflow.runtime.logging import log_event, read_events
+from computepilot.runtime.logging import log_event, read_events
 
 
 def test_log_event_creates_file(tmp_path: Path) -> None:

@@ -117,7 +117,7 @@ Agent + Workflow + Reproducibility
 - 运行环境: Linux / macOS(本地);Linux 集群(Slurm)
 - Python ≥ 3.11
 - 用户身份: 单用户(CLI 在同一账号下运行)
-- 默认工作目录: `sciflow init` 生成的项目目录
+- 默认工作目录: `cpilot init` 生成的项目目录
 
 ---
 
@@ -176,8 +176,8 @@ runs/
 
 | # | 原则 | 工程约束(强制) |
 | --- | --- | --- |
-| P1 | **Agent ≠ Runtime** | 1) `sciflow/runtime/` 内**禁止** import `sciflow/agent/` 及 LLM SDK;2) Agent 输出只能是 Workflow 对象,不是 shell;3) Runtime 在无网络、无 API key 环境下可完整工作 |
-| P2 | **Workflow First** | 1) 所有执行入口只接受 `workflow.yaml`;2) 禁止 "LLM → shell command" 直接执行路径;3) `sciflow run` 不接收自然语言 |
+| P1 | **Agent ≠ Runtime** | 1) `computepilot/runtime/` 内**禁止** import `computepilot/agent/` 及 LLM SDK;2) Agent 输出只能是 Workflow 对象,不是 shell;3) Runtime 在无网络、无 API key 环境下可完整工作 |
+| P2 | **Workflow First** | 1) 所有执行入口只接受 `workflow.yaml`;2) 禁止 "LLM → shell command" 直接执行路径;3) `cpilot run` 不接收自然语言 |
 | P3 | **Everything Reproducible** | 每次 run 必须冻结并记录: code、config、workflow、dataset、environment、parameters、logs、results、model version;缺一不可生成 manifest(§14) |
 | P4 | **Human-in-the-loop** | 超过策略阈值(§13.4)的操作必须阻塞等待审批;审批动作写入审计日志 |
 | P5 | **Local First** | 默认 executor = Local;Docker / Slurm 是可选插件;零云依赖;CI 全程可在无集群环境运行 |
@@ -190,35 +190,35 @@ runs/
 
 ```text
 ┌──────────────────────────────────────────┐
-│                  CLI / UI                 │   sciflow/cli
+│                  CLI / UI                 │   computepilot/cli
 └──────────────────┬───────────────────────┘
                    ▼
 ┌──────────────────────────────────────────┐
-│              Agent Layer                  │   sciflow/agent   (可有 LLM 依赖)
+│              Agent Layer                  │   computepilot/agent   (可有 LLM 依赖)
 │ Intent Parser / Planner / Skill Selector  │
 │ Workflow Generator / Error Diagnoser      │
 └──────────────────┬───────────────────────┘
                    ▼
 ┌──────────────────────────────────────────┐
-│             Workflow Layer                │   sciflow/workflow (纯逻辑,无 LLM)
+│             Workflow Layer                │   computepilot/workflow (纯逻辑,无 LLM)
 │ Workflow Schema / DAG / Validator /       │
 │ Compiler / Optimizer                      │
 └──────────────────┬───────────────────────┘
                    ▼
 ┌──────────────────────────────────────────┐
-│             Runtime Layer                 │   sciflow/runtime  (纯逻辑,无 LLM)
+│             Runtime Layer                 │   computepilot/runtime  (纯逻辑,无 LLM)
 │ Scheduler / Executor / State Manager /    │
 │ Checkpoint / Retry / Cache                │
 └──────────────────┬───────────────────────┘
                    │
        ┌───────────┼──────────────┐
        ▼           ▼              ▼
-    Local       Docker         Slurm          sciflow/executors
+    Local       Docker         Slurm          computepilot/executors
        │           │              │
        └───────────┼──────────────┘
                    ▼
 ┌──────────────────────────────────────────┐
-│            Artifact Layer                 │   sciflow/artifacts
+│            Artifact Layer                 │   computepilot/artifacts
 │ Data / Model / Figure / Log / Report      │
 │ Provenance                                │
 └──────────────────────────────────────────┘
@@ -261,23 +261,23 @@ cli → agent → workflow → runtime → executors → artifacts
 
 | ID | 优先级 | 需求 | 对应模块 |
 | --- | --- | --- | --- |
-| FR-01 | P0 | `sciflow init` 生成项目骨架(目录 + 示例 workflow) | cli |
+| FR-01 | P0 | `cpilot init` 生成项目骨架(目录 + 示例 workflow) | cli |
 | FR-02 | P0 | workflow.yaml 解析为强类型模型;解析/校验失败输出具体错误(行号、字段、原因) | workflow/schema |
 | FR-03 | P0 | DAG 构建:拓扑排序、环检测、孤立节点检测 | workflow/dag |
-| FR-04 | P0 | `sciflow validate` 静态校验:结构 / 资源 / I/O(§8.3) | workflow/validator |
+| FR-04 | P0 | `cpilot validate` 静态校验:结构 / 资源 / I/O(§8.3) | workflow/validator |
 | FR-05 | P0 | LocalExecutor:子进程执行任务,支持并发上限 | executors/local |
 | FR-06 | P0 | Scheduler:按依赖就绪调度 + 最大并发控制 | runtime/scheduler |
 | FR-07 | P0 | 状态持久化:SQLite(§12.1)+ run 目录(§12.2) | runtime/state |
-| FR-08 | P0 | `sciflow status` 实时查看 DAG 与任务状态 | cli/runtime |
-| FR-09 | P0 | `sciflow logs <run-id> <task-id> [--tail N]` | cli/runtime |
-| FR-10 | P1 | 每任务完成后写 checkpoint;`sciflow resume <run-id>` 从最后一个成功任务继续 | runtime/checkpoint |
+| FR-08 | P0 | `cpilot status` 实时查看 DAG 与任务状态 | cli/runtime |
+| FR-09 | P0 | `computepilot logs <run-id> <task-id> [--tail N]` | cli/runtime |
+| FR-10 | P1 | 每任务完成后写 checkpoint;`computepilot resume <run-id>` 从最后一个成功任务继续 | runtime/checkpoint |
 | FR-11 | P1 | Artifact 注册:路径、类型、SHA256、生产者、元数据 | artifacts/store |
 | FR-12 | P1 | Provenance: manifest.json 生成(§14.2) | artifacts/provenance |
-| FR-13 | P1 | `sciflow report <run-id>` 生成 report.md(由 manifest 渲染) | cli/artifacts |
+| FR-13 | P1 | `computepilot report <run-id>` 生成 report.md(由 manifest 渲染) | cli/artifacts |
 | FR-14 | P1 | DockerExecutor:镜像固定( digest 或 tag+pull)、容器内运行、资源映射 | executors/docker |
 | FR-15 | P1 | SlurmExecutor:sbatch 提交、squeue 监控、scancel、分区/节点/墙钟映射 | executors/slurm |
 | FR-16 | P1 | 重试策略:max_attempts、backoff、可重试退出码/信号(§13.3) | runtime/retry |
-| FR-17 | P2 | `sciflow plan "<自然语言>"` → 生成 workflow.yaml draft + 成本估算 + 审批 | agent |
+| FR-17 | P2 | `computepilot plan "<自然语言>"` → 生成 workflow.yaml draft + 成本估算 + 审批 | agent |
 | FR-18 | P2 | Intent 结构化提取:verb、target、parameters、resources、constraints | agent/intent |
 | FR-19 | P2 | Skill 注册 / 检索(§10.6.3):关键词 + 向量检索,top-k 注入 | agent/selector |
 | FR-20 | P2 | 失败诊断:规则分类器(OOM/超时/缺文件/语法错误)+ LLM 深度诊断 → 修复建议 | agent/diagnosis |
@@ -500,7 +500,7 @@ tasks:                           # 必填,≥ 1 个
 
 ## 8. 数据模型(Pydantic v2)
 
-所有模型定义于 `sciflow/models/`;字段校验失败信息必须含字段路径。
+所有模型定义于 `computepilot/models/`;字段校验失败信息必须含字段路径。
 
 ### 8.1 Workflow
 
@@ -674,8 +674,8 @@ CREATED → VALIDATING → PENDING_APPROVAL → RUNNING → SUCCEEDED
 | PENDING_APPROVAL → CANCELLED | 用户拒绝;退出码 3 |
 | RUNNING → SUCCEEDED | 所有任务终态,无 FAILED |
 | RUNNING → FAILED | 存在不可恢复失败任务且无修复路径 |
-| RUNNING → CANCELLED | `sciflow cancel` 或 Ctrl-C(二次确认) |
-| RUNNING → RESUMING | `sciflow resume` 载入 checkpoint 后回到 RUNNING |
+| RUNNING → CANCELLED | `cpilot cancel` 或 Ctrl-C(二次确认) |
+| RUNNING → RESUMING | `cpilot resume` 载入 checkpoint 后回到 RUNNING |
 
 ### 9.2 Task 状态机
 
@@ -704,13 +704,13 @@ PENDING → READY → RUNNING → SUCCEEDED
 
 ## 10. 模块详细设计
 
-### 10.1 `sciflow/models/` — 数据模型
+### 10.1 `computepilot/models/` — 数据模型
 
 - `workflow.py` / `task.py` / `run.py` / `artifact.py` / `intent.py` / `skill.py`
 - 职责: 仅定义 Pydantic 模型与枚举;提供 `parse_workflow_yaml(path) -> Workflow`(含行号错误收集)
 - 约束: 不 import 本包外任何模块
 
-### 10.2 `sciflow/workflow/` — Workflow 层(纯逻辑)
+### 10.2 `computepilot/workflow/` — Workflow 层(纯逻辑)
 
 | 文件 | 职责 | 关键接口 |
 | --- | --- | --- |
@@ -724,7 +724,7 @@ PENDING → READY → RUNNING → SUCCEEDED
 - 环检测: Kahn 拓扑排序,剩余节点即环;错误信息包含环路径
 - 就绪判定: `ready_tasks` 返回所有依赖已完成且自身未终态的任务
 
-### 10.3 `sciflow/runtime/` — Runtime 层(纯逻辑,零 LLM)
+### 10.3 `computepilot/runtime/` — Runtime 层(纯逻辑,零 LLM)
 
 | 文件 | 职责 | 关键接口 |
 | --- | --- | --- |
@@ -753,7 +753,7 @@ while not dag_done:
         else: fail → engine 决定 FAILED | 交给 agent 修复 (P2)
 ```
 
-### 10.4 `sciflow/executors/` — Executor 插件
+### 10.4 `computepilot/executors/` — Executor 插件
 
 ```python
 @dataclass
@@ -795,7 +795,7 @@ class Executor(Protocol):
 - 退出码与 `REASON` 字段映射到统一错误分类(§13.2)
 - **CI 不可用时使用 FakeSlurmExecutor**(同接口,记录式执行),保证单元/集成测试可跑
 
-### 10.5 `sciflow/artifacts/` — Artifact 与 Provenance
+### 10.5 `computepilot/artifacts/` — Artifact 与 Provenance
 
 | 文件 | 职责 |
 | --- | --- |
@@ -804,7 +804,7 @@ class Executor(Protocol):
 
 Artifact 注册时机: 任务 SUCCEEDED 时扫描声明 `outputs`(缺失 → FAILED),计算 SHA256。
 
-### 10.6 `sciflow/agent/` — Agent 层(可有 LLM 依赖)
+### 10.6 `computepilot/agent/` — Agent 层(可有 LLM 依赖)
 
 | 文件 | 职责 | 关键接口 |
 | --- | --- | --- |
@@ -859,7 +859,7 @@ class LLMProvider(Protocol):
 - 流程: `query → retriever → top-k skills(+tools)` → 注入 planner/generator
 - v0.1 内置: `python`、`shell`、`slurm`、`docker` 四个基础 skill
 
-### 10.7 `sciflow/skills/` — Skill 包
+### 10.7 `computepilot/skills/` — Skill 包
 
 目录规范:
 
@@ -898,32 +898,32 @@ error_handling:
     action: resubmit
 ```
 
-### 10.8 `sciflow/cli/` — CLI(第一版唯一界面)
+### 10.8 `computepilot/cli/` — CLI(第一版唯一界面)
 
 Typer 实现。命令参考:
 
 ```text
-sciflow init [dir]                          # FR-01 骨架:workflow.yaml.example + config.yaml + runs/
-sciflow plan "<NL 描述>" [--skills ...]      # FR-17 → 输出 draft + 成本估算 + 审批
-sciflow validate workflow.yaml [--json]     # FR-04
-sciflow run workflow.yaml
+computepilot init [dir]                          # FR-01 骨架:workflow.yaml.example + config.yaml + runs/
+computepilot plan "<NL 描述>" [--skills ...]      # FR-17 → 输出 draft + 成本估算 + 审批
+computepilot validate workflow.yaml [--json]     # FR-04
+computepilot run workflow.yaml
         [--executor local|docker|slurm]     # 默认 local
         [--max-concurrency N]               # 默认 4
         [--config config.yaml]
         [--approve]                         # 跳过审批(危险,记审计)
         [--no-cache]
-sciflow status [run-id]                     # FR-08;无 run-id 显示最近运行
-sciflow logs <run-id> <task-id> [--tail N]  # FR-09
-sciflow resume <run-id> [--executor ...]    # FR-10
-sciflow cancel <run-id>
-sciflow artifacts <run-id> [--type ...]     # FR-11 列表(路径/类型/哈希)
-sciflow report <run-id>                     # FR-13
-sciflow skill list | add <path>             # FR-19
+computepilot status [run-id]                     # FR-08;无 run-id 显示最近运行
+computepilot logs <run-id> <task-id> [--tail N]  # FR-09
+computepilot resume <run-id> [--executor ...]    # FR-10
+computepilot cancel <run-id>
+computepilot artifacts <run-id> [--type ...]     # FR-11 列表(路径/类型/哈希)
+computepilot report <run-id>                     # FR-13
+computepilot skill list | add <path>             # FR-19
 ```
 
 输出风格: `rich` 渲染;状态行含 DAG 缩进与任务状态图标(§22 Web UI 的 CLI 版)。
 
-### 10.9 `sciflow/policy/` — 策略引擎(FR-21)
+### 10.9 `computepilot/policy/` — 策略引擎(FR-21)
 
 配置 `config.yaml`:
 
@@ -958,7 +958,7 @@ Continue? [Y/N]
 
 ## 11. 持久化设计
 
-### 11.1 SQLite Schema(`~/.local/share/sciflow/state.db` 或 `sciflow.db`)
+### 11.1 SQLite Schema(`~/.local/share/computepilot/state.db` 或 `computepilot.db`)
 
 ```sql
 CREATE TABLE runs (
@@ -1100,8 +1100,8 @@ runs/experiment-2026-08-18-001/
 ### 12.3 可复现性验证命令(DevOps 用)
 
 ```text
-sciflow report <run-id>          # 渲染 manifest → report.md
-sciflow verify <run-id>          # 重新校验所有 artifact sha256 是否仍一致
+computepilot report <run-id>          # 渲染 manifest → report.md
+computepilot verify <run-id>          # 重新校验所有 artifact sha256 是否仍一致
 ```
 
 ---
@@ -1218,7 +1218,7 @@ SCIFFLOW_LLM_BASE_URL=https://...            # openai_compat(vLLM/Ollama/DeepSee
 ## 15. 仓库结构
 
 ```text
-sciflow/
+computepilot/
 ├── README.md                       # 定位、三关键词、快速开始、4 个 Demo 截图区
 ├── LICENSE                         # 建议 MIT 或 Apache-2.0
 ├── pyproject.toml
@@ -1231,7 +1231,7 @@ sciflow/
 │   ├── agent.md                    # Agent 设计 + prompt 说明
 │   └── contributing.md
 │
-├── sciflow/
+├── computepilot/
 │   ├── __init__.py                 # __version__
 │   ├── models/                     # §8
 │   │   ├── workflow.py  task.py  run.py  artifact.py  intent.py  skill.py
@@ -1304,7 +1304,7 @@ sciflow/
 
 ```text
 1. ruff check + ruff format --check
-2. mypy --strict sciflow/
+2. mypy --strict computepilot/
 3. python scripts/check_deps.py        # 依赖方向
 4. pytest tests/unit tests/integration --cov
 5. pytest tests/examples
@@ -1326,12 +1326,12 @@ sciflow/
 
 | Phase | 周期 | 内容 | 出口条件(Exit Criteria) |
 | --- | --- | --- | --- |
-| Phase 0 — Design | 1 周 | 架构、DSL、接口、仓库骨架 | §7 DSL 定稿;`sciflow init` 可用;CI 绿 |
-| Phase 1 — Workflow Engine | 2–3 周 | DAG/Scheduler/Executor/State/CLI | `sciflow run examples/hello_world` 真实跑通 |
-| Phase 2 — Reproducibility | 1–2 周 | Checkpoint/Artifact/Provenance/manifest | `sciflow resume` 可恢复;manifest 完整 |
+| Phase 0 — Design | 1 周 | 架构、DSL、接口、仓库骨架 | §7 DSL 定稿;`cpilot init` 可用;CI 绿 |
+| Phase 1 — Workflow Engine | 2–3 周 | DAG/Scheduler/Executor/State/CLI | `computepilot run examples/hello_world` 真实跑通 |
+| Phase 2 — Reproducibility | 1–2 周 | Checkpoint/Artifact/Provenance/manifest | `cpilot resume` 可恢复;manifest 完整 |
 | Phase 3 — Docker / Slurm | 2–3 周 | 三个 Executor 插件 | 同一 workflow 三端可跑;FakeSlurm 测试绿 |
 | **Release v0.1-alpha** | – | 以上合入 | **Demo 1–4 全过**(含本地版) |
-| Phase 4 — Agent | 2–3 周 | Intent/Planner/Generator/Validator/审批 | `sciflow plan "..."` 生成可运行 workflow |
+| Phase 4 — Agent | 2–3 周 | Intent/Planner/Generator/Validator/审批 | `computepilot plan "..."` 生成可运行 workflow |
 | Phase 5 — Scientific Skills | 2–3 周 | python/slurm 深化 + 领域 skill 框架 | skill registry + 检索可用 |
 | Phase 6 — Recovery Agent | 3–4 周 | 诊断/修复/重试/审批闭环 | Demo 2 全自动(审批后)通过 |
 | Phase 7 — UI(第二阶段) | 之后 | Web Dashboard / 图可视化 / 日志流 | 另行立项 |
@@ -1340,15 +1340,15 @@ sciflow/
 
 | 周 | 目标 | 交付物 | 周验收标准(AC) |
 | --- | --- | --- | --- |
-| 1 | Workflow DSL + 架构 | schema.py、dag.py 骨架、docs/architecture.md、`sciflow init` | workflow.yaml ↔ Workflow 模型 roundtrip 测试通过;环检测单测通过 |
+| 1 | Workflow DSL + 架构 | schema.py、dag.py 骨架、docs/architecture.md、`cpilot init` | workflow.yaml ↔ Workflow 模型 roundtrip 测试通过;环检测单测通过 |
 | 2 | DAG + Task Model | dag.py 完整、validator 结构/资源/I/O 规则 | E-001~E-009、E-100~E-106、E-200~E-203 全错误码测试通过 |
-| 3 | Local Executor | executors/local.py、engine 单任务路径 | `sciflow run examples/hello_world` 端到端成功,产物生成 |
+| 3 | Local Executor | executors/local.py、engine 单任务路径 | `computepilot run examples/hello_world` 端到端成功,产物生成 |
 | 4 | Scheduler + 并行 | scheduler.py、max-concurrency、rich status | parameter_sweep(10 点)并行运行,status 正确显示,DAG 就绪顺序正确 |
 | 5 | State + Checkpoint | state.py、checkpoint.py、`resume` | **Demo 3 通过**:kill 进程后 resume 不丢不重 |
 | 6 | Artifact + Provenance | store.py、provenance.py、manifest、`report` | **Demo 4 通过**:两版代码 manifest 可区分;artifact sha256 正确 |
 | 7 | Docker Executor | docker.py | 同一 workflow 在固定镜像容器内跑通;digest 入 manifest |
 | 8 | Slurm Executor | slurm.py、fake_slurm.py | FakeSlurm 全绿;真实集群冒烟脚本可运行(有集群时) |
-| 9 | Agent Intent + Planner | provider.py、intent.py、planner.py | `sciflow plan "run parameter sweep from 1 to 100 with 50 points"` 输出有效 Intent |
+| 9 | Agent Intent + Planner | provider.py、intent.py、planner.py | `computepilot plan "run parameter sweep from 1 to 100 with 50 points"` 输出有效 Intent |
 | 10 | Workflow 生成 + 校验 | generator.py + agent 侧 validator 闭环 | Agent 生成的 workflow 首次通过 validator ≥ 90%;生成失败自动修复 ≤ 3 轮 |
 | 11 | 失败诊断 + 重试 | diagnosis.py、retry 闭环、审批 | **Demo 2 通过**:OOM → 自动升内存 → 审批 → 重试成功 |
 | 12 | Demo + 文档 + v0.1 | e2e 套件、README、LICENSE、CI 全绿 | **Demo 1–4 自动化全过**;发布 v0.1;§18 门禁 checklist 全勾 |
@@ -1384,7 +1384,7 @@ job 17 → OOM
 **Demo 3 — 崩溃恢复**
 ```text
 job 1 ✓ job 2 ✓ job 3 ✓ job 4 running → kill engine
-sciflow resume → 继续执行
+computepilot resume → 继续执行
 断言: 1–3 状态保持 SUCCEEDED 且未被重跑;4 重跑或继续;最终全部完成
 ```
 
@@ -1398,7 +1398,7 @@ git commit A → run A;git commit B → run B
 ### 18.2 v0.1 发布门禁 Checklist
 
 - [ ] Demo 1–4 自动化测试全部通过(CI)
-- [ ] `sciflow plan` + `sciflow run` 全链路手工演示成功(§18.3 North Star Demo)
+- [ ] `cpilot plan` + `cpilot run` 全链路手工演示成功(§18.3 North Star Demo)
 - [ ] 单元覆盖率 ≥ 90%,mypy strict、ruff 零错误
 - [ ] `scripts/check_deps.py` 通过(runtime 无 LLM 依赖)
 - [ ] README 完整(定位、安装、5 分钟快速开始、Demo 说明)
@@ -1408,11 +1408,11 @@ git commit A → run A;git commit B → run B
 ---
 ### 18.3 v0.1 完整用户交互示例(North Star Demo)
 
-以下展示从 `sciflow plan` 到 `sciflow run`、到失败诊断、到修复重试、到最终产物的完整终端交互。
+以下展示从 `cpilot plan` 到 `cpilot run`、到失败诊断、到修复重试、到最终产物的完整终端交互。
 这是 v0.1 的 North Star Demo——**如果你能把这一条完整链路做出来,这个项目就已经非常像样了。**
 
 ```text
-$ sciflow plan \
+$ computepilot plan \
   "Run my simulation with x from 1 to 100,
    use 16 CPUs, analyze the results and
    generate a plot."
@@ -1433,7 +1433,7 @@ Approve? [y/N]
 ```
 
 ```text
-$ sciflow run workflow.yaml
+$ computepilot run workflow.yaml
 
 generate_parameters       ✓
 simulation 01             ✓
@@ -1520,7 +1520,7 @@ Reproducibility manifest:
 
 ### 21.1 工程演进(架构已预留)
 
-- **Web UI**(Phase 7): FastAPI + React/Next.js;复用 `sciflow status` 的数据层(只加 API 层,不动 runtime)
+- **Web UI**(Phase 7): FastAPI + React/Next.js;复用 `cpilot status` 的数据层(只加 API 层,不动 runtime)
 - **多后端**: S3/MinIO/HuggingFace artifact store(替换 `artifacts/store.py` 的实现即可)
 - **分布式引擎**: 将 `runtime/engine.py` 的调度循环替换为 Dask/Ray 适配器
 - **领域 Skill 生态**: OpenFOAM / LAMMPS / GROMACS / PyTorch skill 包,遵循 §10.7 规范
@@ -1535,7 +1535,7 @@ Reproducibility manifest:
 | D | Failure-Aware Agents:失败诊断→修复→验证→恢复闭环 | 失败样本库:TaskResult + Diagnosis + 修复结果 |
 | E | Deterministic Runtime + LLM 分工:什么决策交给 LLM、什么交给确定性系统 | 审计日志:每次 LLM 决策点与人工干预点 |
 
-**建议**: v0.1 起就把 plan/run 的 JSONL 日志视为研究数据集资产,提供 `sciflow export-traces` 命令(低成本,高远期价值)。
+**建议**: v0.1 起就把 plan/run 的 JSONL 日志视为研究数据集资产,提供 `computepilot export-traces` 命令(低成本,高远期价值)。
 
 ---
 
@@ -1559,7 +1559,7 @@ Reproducibility manifest:
 
 | 变量 | 用途 |
 | --- | --- |
-| `SCIFFLOW_HOME` | 状态库与缓存目录(默认 `~/.local/share/sciflow`) |
+| `SCIFFLOW_HOME` | 状态库与缓存目录(默认 `~/.local/share/computepilot`) |
 | `SCIFFLOW_LLM_PROVIDER` / `_MODEL` / `_API_KEY` / `_BASE_URL` | LLM 配置(§14.3) |
 | `SCIFFLOW_NO_COLOR` | CLI 纯文本输出 |
 | `SCIFFLOW_LOG_LEVEL` | 默认 INFO |

@@ -10,22 +10,22 @@ from pathlib import Path
 
 import pytest
 
-from sciflow.executors.fake_slurm import FakeSlurmExecutor
-from sciflow.executors.local import LocalExecutor
-from sciflow.models.run import Run, RunStatus, TaskStatus
-from sciflow.models.workflow import Resources, RetryPolicy, Task, TaskType, Workflow
-from sciflow.runtime.engine import Engine
-from sciflow.runtime.executor import (
+from computepilot.executors.fake_slurm import FakeSlurmExecutor
+from computepilot.executors.local import LocalExecutor
+from computepilot.models.run import Run, RunStatus, TaskStatus
+from computepilot.models.workflow import Resources, RetryPolicy, Task, TaskType, Workflow
+from computepilot.runtime.engine import Engine
+from computepilot.runtime.executor import (
     DiagnosisResult,
     ExecutorCapability,
     Handle,
     RepairSpec,
     TaskResult,
 )
-from sciflow.runtime.scheduler import Scheduler
-from sciflow.runtime.state import StateStore
-from sciflow.workflow.dag import build_dag
-from sciflow.workflow.schema import dump_workflow, load_workflow
+from computepilot.runtime.scheduler import Scheduler
+from computepilot.runtime.state import StateStore
+from computepilot.workflow.dag import build_dag
+from computepilot.workflow.schema import dump_workflow, load_workflow
 
 # =========================================================================
 # 1. Engine — validate_task rejection → run fails immediately

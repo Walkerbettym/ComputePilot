@@ -9,13 +9,13 @@ import pytest
 import yaml
 from pydantic import ValidationError
 
-from sciflow.agent.selector import SkillRetriever
-from sciflow.models.workflow import Resources
-from sciflow.skills.base import ErrorAction, Skill, SkillRegistry
-from sciflow.skills.docker import docker_skill
-from sciflow.skills.python import python_skill
-from sciflow.skills.shell import shell_skill
-from sciflow.skills.slurm import slurm_skill
+from computepilot.agent.selector import SkillRetriever
+from computepilot.models.workflow import Resources
+from computepilot.skills.base import ErrorAction, Skill, SkillRegistry
+from computepilot.skills.docker import docker_skill
+from computepilot.skills.python import python_skill
+from computepilot.skills.shell import shell_skill
+from computepilot.skills.slurm import slurm_skill
 
 
 class TestSkillModel:

@@ -7,9 +7,9 @@ import subprocess
 
 import pytest
 
-from sciflow.executors.docker import DockerExecutor
-from sciflow.models.run import TaskStatus
-from sciflow.models.workflow import Task, TaskType
+from computepilot.executors.docker import DockerExecutor
+from computepilot.models.run import TaskStatus
+from computepilot.models.workflow import Task, TaskType
 
 
 def _docker_available() -> bool:

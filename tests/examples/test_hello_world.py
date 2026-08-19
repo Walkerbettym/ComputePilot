@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from sciflow.workflow.schema import load_workflow
-from sciflow.workflow.validator import validate
+from computepilot.workflow.schema import load_workflow
+from computepilot.workflow.validator import validate
 
 EXAMPLES_DIR = Path(__file__).resolve().parent.parent.parent / "examples"
 

@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from sciflow.models.workflow import Task
-from sciflow.runtime.cache import CacheEntry, CacheKey, TaskCache
+from computepilot.models.workflow import Task
+from computepilot.runtime.cache import CacheEntry, CacheKey, TaskCache
 
 
 class TestCacheKey:

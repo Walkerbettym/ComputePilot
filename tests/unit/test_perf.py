@@ -12,13 +12,13 @@ from pathlib import Path
 
 import pytest
 
-from sciflow.executors.fake_slurm import FakeSlurmExecutor
-from sciflow.models.run import RunStatus
-from sciflow.models.workflow import Task, Workflow
-from sciflow.runtime.engine import Engine
-from sciflow.runtime.scheduler import Scheduler
-from sciflow.runtime.state import StateStore
-from sciflow.workflow.dag import build_dag
+from computepilot.executors.fake_slurm import FakeSlurmExecutor
+from computepilot.models.run import RunStatus
+from computepilot.models.workflow import Task, Workflow
+from computepilot.runtime.engine import Engine
+from computepilot.runtime.scheduler import Scheduler
+from computepilot.runtime.state import StateStore
+from computepilot.workflow.dag import build_dag
 
 
 @pytest.mark.perf

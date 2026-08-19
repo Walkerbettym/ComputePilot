@@ -6,9 +6,9 @@ import asyncio
 
 import pytest
 
-from sciflow.executors.local import LocalExecutor
-from sciflow.models.run import TaskStatus
-from sciflow.models.workflow import Task, TaskType
+from computepilot.executors.local import LocalExecutor
+from computepilot.models.run import TaskStatus
+from computepilot.models.workflow import Task, TaskType
 
 
 @pytest.mark.asyncio
@@ -61,7 +61,7 @@ async def test_local_executor_logs() -> None:
 
 @pytest.mark.asyncio
 async def test_local_executor_validate_rejects_gpu() -> None:
-    from sciflow.models.workflow import Resources as Res
+    from computepilot.models.workflow import Resources as Res
 
     exe = LocalExecutor()
     task = Task(

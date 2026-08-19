@@ -9,8 +9,8 @@ from uuid import uuid4
 
 import pytest
 
-from sciflow.models.run import Run, RunStatus, TaskStatus
-from sciflow.runtime.state import StateStore
+from computepilot.models.run import Run, RunStatus, TaskStatus
+from computepilot.runtime.state import StateStore
 
 
 @pytest.fixture

@@ -1,7 +1,7 @@
 import pytest
 from pydantic import ValidationError
 
-from sciflow.models.workflow import Resources, Task, TaskType, Workflow
+from computepilot.models.workflow import Resources, Task, TaskType, Workflow
 
 
 def test_task_minimal() -> None:

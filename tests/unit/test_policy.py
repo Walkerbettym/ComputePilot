@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from sciflow.policy.engine import PolicyConfig, PolicyEngine
+from computepilot.policy.engine import PolicyConfig, PolicyEngine
 
 
 class TestPolicyConfig:

@@ -7,11 +7,11 @@ from typing import Any
 
 from pydantic import BaseModel
 
-from sciflow.agent.cost import CostEstimator
-from sciflow.agent.generator import WorkflowGenerator
-from sciflow.agent.intent import Intent, IntentExtractor
-from sciflow.agent.planner import Planner
-from sciflow.agent.provider import LLMProvider, LLMResponse
+from computepilot.agent.cost import CostEstimator
+from computepilot.agent.generator import WorkflowGenerator
+from computepilot.agent.intent import Intent, IntentExtractor
+from computepilot.agent.planner import Planner
+from computepilot.agent.provider import LLMProvider, LLMResponse
 
 
 @dataclass
@@ -125,7 +125,7 @@ class TestPlanner:
         intent = Intent(verb="shell", target="script.sh")
         planner = Planner()
         wf = planner.plan(intent)
-        from sciflow.models.workflow import TaskType
+        from computepilot.models.workflow import TaskType
 
         assert wf.tasks[0].type == TaskType.SHELL
 
@@ -157,7 +157,7 @@ class TestCostEstimator:
         assert estimate.currency == "USD"
 
     def test_estimate_with_custom_rates(self) -> None:
-        from sciflow.models.workflow import TaskType
+        from computepilot.models.workflow import TaskType
 
         intent = Intent(verb="train", target="test")
         planner = Planner()

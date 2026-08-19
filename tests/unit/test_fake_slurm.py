@@ -4,9 +4,9 @@ from __future__ import annotations
 
 import pytest
 
-from sciflow.executors.fake_slurm import FakeSlurmExecutor
-from sciflow.models.run import TaskStatus
-from sciflow.models.workflow import Task
+from computepilot.executors.fake_slurm import FakeSlurmExecutor
+from computepilot.models.run import TaskStatus
+from computepilot.models.workflow import Task
 
 
 @pytest.fixture

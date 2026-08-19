@@ -2,8 +2,8 @@
 
 import pytest
 
-from sciflow.models.workflow import Task, Workflow
-from sciflow.workflow.dag import DAG, build_dag
+from computepilot.models.workflow import Task, Workflow
+from computepilot.workflow.dag import DAG, build_dag
 
 
 class TestTopologicalOrder:

@@ -4,7 +4,7 @@
 
 ```
 ┌────────────────────────────────────────────┐
-│              CLI / UI                       │  Typer CLI（sciflow 命令）
+│              CLI / UI                       │  Typer CLI（computepilot 命令）
 ├────────────────────────────────────────────┤
 │              Agent Layer                    │  意图提取、规划、技能检索、诊断
 ├────────────────────────────────────────────┤
@@ -94,7 +94,7 @@ ArtifactStore（注册/查询/校验和）、ProvenanceBuilder（manifest.json �
 ## CLI 命令架构
 
 ```
-sciflow
+computepilot
 ├── init       创建项目骨架
 ├── validate   校验 workflow（24 条规则）
 ├── run        执行（Local/Docker/Slurm）

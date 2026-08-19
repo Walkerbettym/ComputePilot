@@ -4,8 +4,8 @@ import ast
 import sys
 from pathlib import Path
 
-RUNTIME_DIR = Path("sciflow/runtime")
-FORBIDDEN = {"sciflow.agent", "openai", "anthropic", "httpx"}
+RUNTIME_DIR = Path("computepilot/runtime")
+FORBIDDEN = {"computepilot.agent", "openai", "anthropic", "httpx"}
 
 errors = []
 for py_file in RUNTIME_DIR.rglob("*.py"):

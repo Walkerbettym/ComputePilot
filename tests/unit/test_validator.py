@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from datetime import timedelta
 
-from sciflow.models.workflow import Resources, RetryPolicy, Task, Workflow
-from sciflow.workflow.validator import ValidationError, ValidationReport, validate
+from computepilot.models.workflow import Resources, RetryPolicy, Task, Workflow
+from computepilot.workflow.validator import ValidationError, ValidationReport, validate
 
 
 def _make_workflow(name: str = "test", tasks: list[Task] | None = None) -> Workflow:

@@ -321,7 +321,7 @@ Slurm
 建议直接按照这个开始：
 
 ```text
-sciflow/
+computepilot/
 │
 ├── README.md
 ├── LICENSE
@@ -334,7 +334,7 @@ sciflow/
 │   ├── agent.md
 │   └── contributing.md
 │
-├── sciflow/
+├── computepilot/
 │   │
 │   ├── agent/
 │   │   ├── planner.py
@@ -1004,35 +1004,35 @@ Continue?
 第一版：
 
 ```bash
-sciflow init
+computepilot init
 ```
 
 ```bash
-sciflow plan "run parameter sweep..."
+computepilot plan "run parameter sweep..."
 ```
 
 ```bash
-sciflow validate workflow.yaml
+computepilot validate workflow.yaml
 ```
 
 ```bash
-sciflow run workflow.yaml
+computepilot run workflow.yaml
 ```
 
 ```bash
-sciflow status
+computepilot status
 ```
 
 ```bash
-sciflow logs task-42
+computepilot logs task-42
 ```
 
 ```bash
-sciflow resume run-001
+computepilot resume run-001
 ```
 
 ```bash
-sciflow artifacts run-001
+computepilot artifacts run-001
 ```
 
 CLI 足够了。
@@ -1200,7 +1200,7 @@ CLI
 做到：
 
 ```bash
-sciflow run workflow.yaml
+computepilot run workflow.yaml
 ```
 
 可以真的运行。
@@ -1223,7 +1223,7 @@ Run metadata
 做到：
 
 ```bash
-sciflow resume run-001
+computepilot resume run-001
 ```
 
 ---
@@ -1260,7 +1260,7 @@ Validator
 做到：
 
 ```bash
-sciflow plan "run..."
+computepilot plan "run..."
 ```
 
 自动生成：
@@ -1394,7 +1394,7 @@ job 4 running
 重新启动：
 
 ```text
-sciflow resume
+computepilot resume
 ```
 
 继续执行。
@@ -1660,7 +1660,7 @@ Artifacts + Provenance
 我建议你给自己一个非常明确的终点：
 
 ```text
-$ sciflow plan \
+$ computepilot plan \
   "Run my simulation with x from 1 to 100,
    use 16 CPUs, analyze the results and
    generate a plot."
@@ -1687,7 +1687,7 @@ Approve? [y/N]
 然后：
 
 ```text
-$ sciflow run workflow.yaml
+$ computepilot run workflow.yaml
 ```
 
 运行：
