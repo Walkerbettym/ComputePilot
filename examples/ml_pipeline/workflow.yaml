@@ -1,0 +1,89 @@
+name: ml_pipeline
+description: >
+  ML pipeline: preprocess data, train a simple model, and evaluate accuracy.
+tasks:
+  - id: preprocess
+    command: python
+    args:
+      - "-c"
+      - |
+        import json, random
+        random.seed(42)
+        # Generate synthetic dataset (100 samples, 4 features)
+        X = [[random.gauss(i*0.1, 1) for i in range(4)] for _ in range(100)]
+        y = [1 if sum(x) > 0 else 0 for x in X]
+        with open('dataset.json', 'w') as f:
+            json.dump({"X": X, "y": y}, f)
+        print("Generated 100 samples")
+    outputs:
+      - dataset.json
+    environment:
+      SEED: "42"
+
+  - id: train
+    command: python
+    args:
+      - "-c"
+      - |
+        import json, math
+        with open('dataset.json') as f:
+            data = json.load(f)
+        X, y = data["X"], data["y"]
+        # Simple logistic regression via gradient descent
+        w = [0.0] * len(X[0])
+        b = 0.0
+        lr = 0.01
+        for epoch in range(100):
+            for xi, yi in zip(X, y):
+                z = sum(wi * xj for wi, xj in zip(w, xi)) + b
+                pred = 1 / (1 + math.exp(-z))
+                dw = [(pred - yi) * xj for xj in xi]
+                db = pred - yi
+                w = [wi - lr * dwi for wi, dwi in zip(w, dw)]
+                b = b - lr * db
+        with open('model.json', 'w') as f:
+            json.dump({"weights": w, "bias": b}, f)
+    depends_on:
+      - preprocess
+    inputs:
+      - dataset.json
+    outputs:
+      - model.json
+    resources:
+      cpu: 2
+      memory: 2GB
+
+  - id: evaluate
+    command: python
+    args:
+      - "-c"
+      - |
+        import json, math
+        with open('dataset.json') as f:
+            data = json.load(f)
+        with open('model.json') as f:
+            model = json.load(f)
+        X, y = data["X"], data["y"]
+        w, b = model["weights"], model["bias"]
+        correct = 0
+        for xi, yi in zip(X, y):
+            z = sum(wi * xj for wi, xj in zip(w, xi)) + b
+            pred = 1 / (1 + math.exp(-z))
+            if (pred > 0.5) == (yi == 1):
+                correct += 1
+        acc = correct / len(y)
+        report = {
+            "accuracy": round(acc, 4),
+            "total_samples": len(y),
+            "correct": correct,
+        }
+        with open('report.json', 'w') as f:
+            json.dump(report, f, indent=2)
+        print(f"Accuracy: {acc:.2%}")
+    depends_on:
+      - train
+    inputs:
+      - dataset.json
+      - model.json
+    outputs:
+      - report.json

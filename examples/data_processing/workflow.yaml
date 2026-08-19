@@ -1,0 +1,89 @@
+name: data_processing
+description: >
+  Data processing pipeline: download (simulated), clean, transform,
+  and generate a CSV report — mixing shell and Python tasks.
+tasks:
+  - id: fetch_data
+    type: shell
+    command: python
+    args:
+      - "-c"
+      - |
+        import json, random
+        random.seed(42)
+        # Simulate raw data collection
+        records = []
+        for i in range(200):
+            records.append({
+                "id": i,
+                "value": round(random.gauss(50, 15), 2),
+                "category": random.choice(["A", "B", "C"]),
+            })
+        import csv, io
+        with open('raw_data.csv', 'w', newline='') as f:
+            writer = csv.DictWriter(f, fieldnames=["id", "value", "category"])
+            writer.writeheader()
+            writer.writerows(records)
+        print(f"Generated {len(records)} records")
+    outputs:
+      - raw_data.csv
+    environment:
+      SEED: "42"
+
+  - id: clean_data
+    type: shell
+    command: sh
+    args:
+      - "-c"
+      - |
+        # Remove rows with value > 80 (outliers), keep header
+        head -1 raw_data.csv > clean_data.csv
+        awk -F',' '{if ($2 <= 80) print}' raw_data.csv >> clean_data.csv
+        echo "Cleaned: $(wc -l < clean_data.csv) rows (incl. header)"
+    depends_on:
+      - fetch_data
+    inputs:
+      - raw_data.csv
+    outputs:
+      - clean_data.csv
+
+  - id: summarize
+    command: python
+    args:
+      - "-c"
+      - |
+        import csv, json, statistics
+        from collections import Counter
+        with open('clean_data.csv') as f:
+            reader = csv.DictReader(f)
+            data = list(reader)
+        values = [float(r["value"]) for r in data]
+        cats = Counter(r["category"] for r in data)
+        summary = {
+            "total_records": len(data),
+            "mean": round(statistics.mean(values), 2),
+            "median": round(statistics.median(values), 2),
+            "stdev": round(statistics.stdev(values), 2),
+            "min": round(min(values), 2),
+            "max": round(max(values), 2),
+            "category_distribution": dict(cats),
+        }
+        with open('summary.json', 'w') as f:
+            json.dump(summary, f, indent=2)
+        import csv
+        with open('summary.csv', 'w', newline='') as f:
+            w = csv.writer(f)
+            w.writerow(["metric", "value"])
+            for k, v in summary.items():
+                w.writerow([k, str(v)])
+        print(f"Summarized {len(data)} records")
+    depends_on:
+      - clean_data
+    inputs:
+      - clean_data.csv
+    outputs:
+      - summary.json
+      - summary.csv
+    resources:
+      cpu: 2
+      memory: 2GB

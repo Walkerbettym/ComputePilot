@@ -1,0 +1,61 @@
+name: parameter_sweep
+description: >
+  Parameter sweep: generate parameters from 1 to 50, run simulation,
+  collect results, and produce a summary.
+tasks:
+  - id: generate_params
+    command: python
+    args:
+      - "-c"
+      - |
+        import json
+        params = list(range(1, 51))
+        with open('params.json', 'w') as f:
+            json.dump(params, f)
+    outputs:
+      - params.json
+    checkpoint: true
+
+  - id: simulate
+    command: python
+    args:
+      - "-c"
+      - |
+        import json
+        with open('params.json') as f:
+            params = json.load(f)
+        results = [x**3 / (x + 1) for x in params]
+        with open('results.json', 'w') as f:
+            json.dump(results, f)
+    depends_on:
+      - generate_params
+    inputs:
+      - params.json
+    outputs:
+      - results.json
+    resources:
+      cpu: 2
+      memory: 2GB
+
+  - id: analyze
+    command: python
+    args:
+      - "-c"
+      - |
+        import json, statistics
+        with open('results.json') as f:
+            results = json.load(f)
+        stats = {
+            "min": min(results),
+            "max": max(results),
+            "mean": statistics.mean(results),
+            "stdev": statistics.stdev(results) if len(results) > 1 else 0,
+        }
+        with open('summary.json', 'w') as f:
+            json.dump(stats, f, indent=2)
+    depends_on:
+      - simulate
+    inputs:
+      - results.json
+    outputs:
+      - summary.json

@@ -1,0 +1,67 @@
+name: docker_worker
+description: >
+  Compute intensive task running inside a Docker container:
+  calculate prime numbers and generate a report.
+tasks:
+  - id: compute_primes
+    type: docker
+    image: python:3.11-slim
+    command: python
+    args:
+      - "-c"
+      - |
+        import json, math, time
+        start = time.time()
+        def is_prime(n):
+            if n < 2: return False
+            for i in range(2, int(math.sqrt(n)) + 1):
+                if n % i == 0:
+                    return False
+            return True
+        primes = [n for n in range(100000) if is_prime(n)]
+        elapsed = time.time() - start
+        result = {
+            "count": len(primes),
+            "largest": primes[-1] if primes else None,
+            "time_seconds": round(elapsed, 2),
+        }
+        with open('primes.json', 'w') as f:
+            json.dump(result, f, indent=2)
+        print(f"Found {len(primes)} primes in {elapsed:.2f}s")
+    outputs:
+      - primes.json
+    resources:
+      cpu: 4
+      memory: 4GB
+    retry_policy:
+      max_attempts: 2
+      backoff: fixed
+      base_delay: 5
+
+  - id: generate_report
+    type: docker
+    image: python:3.11-slim
+    command: python
+    args:
+      - "-c"
+      - |
+        import json
+        with open('primes.json') as f:
+            data = json.load(f)
+        lines = [
+            "# Prime Computation Report",
+            f"",
+            f"**Total primes found (0-100000):** {data['count']}",
+            f"**Largest prime:** {data['largest']}",
+            f"**Computation time:** {data['time_seconds']}s",
+        ]
+        with open('REPORT.md', 'w') as f:
+            f.write('\n'.join(lines) + '\n')
+        print("Report generated")
+    depends_on:
+      - compute_primes
+    inputs:
+      - primes.json
+    outputs:
+      - REPORT.md
+    checkpoint: false
