@@ -1,0 +1,145 @@
+name: cfd_parameter_sweep
+description: >
+  CFD parameter sweep: flow over a cylinder at Re=100,200,500,1000,2000.
+  Mesh → 5 independent simulations → collect → analyze → report.
+tasks:
+  - id: mesh
+    command: python
+    args:
+      - "-c"
+      - |
+        import json
+        report = {"cells": 125000, "quality": 0.85, "Re_cases": [100,200,500,1000,2000]}
+        with open("mesh.json","w") as f:
+            json.dump(report, f)
+        print(f"Mesh: {report['cells']} cells, 5 Re cases")
+    outputs:
+      - mesh.json
+
+  - id: sim_Re100
+    command: python
+    args:
+      - "-c"
+      - |
+        import json, math
+        Re = 100; Cd = round(0.5+1.0/math.sqrt(Re),4); St = round(0.198*(1-1.0/Re**0.5),4)
+        with open("sim_Re100.json","w") as f:
+            json.dump({"Re":Re,"Cd":Cd,"St":St}, f)
+        print(f"Re={Re}: Cd={Cd}")
+    depends_on: [mesh]
+    outputs:
+      - sim_Re100.json
+    resources: {cpu: 4, memory: 4GB}
+    retry_policy: {max_attempts: 2}
+    timeout: "PT1H"
+
+  - id: sim_Re200
+    command: python
+    args:
+      - "-c"
+      - |
+        import json, math
+        Re = 200; Cd = round(0.5+1.0/math.sqrt(Re),4); St = round(0.198*(1-1.0/Re**0.5),4)
+        with open("sim_Re200.json","w") as f:
+            json.dump({"Re":Re,"Cd":Cd,"St":St}, f)
+        print(f"Re={Re}: Cd={Cd}")
+    depends_on: [mesh]
+    outputs:
+      - sim_Re200.json
+    resources: {cpu: 4, memory: 4GB}
+    timeout: "PT2H"
+
+  - id: sim_Re500
+    command: python
+    args:
+      - "-c"
+      - |
+        import json, math
+        Re = 500; Cd = round(0.5+1.0/math.sqrt(Re),4); St = round(0.198*(1-1.0/Re**0.5),4)
+        with open("sim_Re500.json","w") as f:
+            json.dump({"Re":Re,"Cd":Cd,"St":St}, f)
+        print(f"Re={Re}: Cd={Cd}")
+    depends_on: [mesh]
+    outputs:
+      - sim_Re500.json
+    resources: {cpu: 8, memory: 8GB}
+    timeout: "PT4H"
+
+  - id: sim_Re1000
+    command: python
+    args:
+      - "-c"
+      - |
+        import json, math
+        Re = 1000; Cd = round(0.5+1.0/math.sqrt(Re),4); St = round(0.198*(1-1.0/Re**0.5),4)
+        with open("sim_Re1000.json","w") as f:
+            json.dump({"Re":Re,"Cd":Cd,"St":St}, f)
+        print(f"Re={Re}: Cd={Cd}")
+    depends_on: [mesh]
+    outputs:
+      - sim_Re1000.json
+    resources: {cpu: 8, memory: 8GB}
+    timeout: "PT6H"
+
+  - id: sim_Re2000
+    command: python
+    args:
+      - "-c"
+      - |
+        import json, math
+        Re = 2000; Cd = round(0.5+1.0/math.sqrt(Re),4); St = round(0.198*(1-1.0/Re**0.5),4)
+        with open("sim_Re2000.json","w") as f:
+            json.dump({"Re":Re,"Cd":Cd,"St":St}, f)
+        print(f"Re={Re}: Cd={Cd}")
+    depends_on: [mesh]
+    outputs:
+      - sim_Re2000.json
+    resources: {cpu: 16, memory: 16GB}
+    timeout: "PT8H"
+    retry_policy: {max_attempts: 3, backoff: exponential}
+
+  - id: collect
+    command: python
+    args:
+      - "-c"
+      - |
+        import json, os
+        results = {}
+        for fname in sorted(os.listdir(".")):
+            if fname.startswith("sim_") and fname.endswith(".json"):
+                with open(fname) as f:
+                    data = json.load(f)
+                results[str(data["Re"])] = {"Cd": data["Cd"], "St": data.get("St")}
+        with open("cfd_summary.json","w") as f:
+            json.dump(results, f, indent=2)
+        print(f"Collected {len(results)} simulation results")
+        for k,v in results.items():
+            print(f"  Re={k:>4s}  Cd={v['Cd']:.4f}")
+    depends_on:
+      - sim_Re100
+      - sim_Re200
+      - sim_Re500
+      - sim_Re1000
+      - sim_Re2000
+    outputs:
+      - cfd_summary.json
+
+  - id: report
+    command: python
+    args:
+      - "-c"
+      - |
+        import json
+        with open("cfd_summary.json") as f:
+            data = json.load(f)
+        lines = ["# CFD Results: Flow over a Cylinder\n",
+                 "| Re | Cd | St |", "|---|---|---|"]
+        for Re in sorted(data, key=int):
+            d = data[Re]
+            lines.append(f"|{Re}|{d['Cd']}|{d.get('St','-')}|")
+        open("CFD_REPORT.md","w").write("\n".join(lines)+"\n")
+        print("\n".join(lines))
+    depends_on:
+      - collect
+    outputs:
+      - CFD_REPORT.md

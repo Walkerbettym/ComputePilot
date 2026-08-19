@@ -29,6 +29,7 @@ EXAMPLES: list[tuple[str, int]] = [
     ("ml_pipeline", 3),
     ("docker_worker", 2),
     ("data_processing", 3),
+    ("cfd_parameter_sweep", 8),
 ]
 
 
