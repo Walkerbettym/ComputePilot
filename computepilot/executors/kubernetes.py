@@ -6,9 +6,6 @@ Submits tasks as Kubernetes Jobs via ``kubectl run``.
 from __future__ import annotations
 
 import asyncio
-import os
-import tempfile
-from pathlib import Path
 
 from computepilot.models.run import TaskStatus
 from computepilot.models.workflow import Task, TaskType
@@ -84,8 +81,14 @@ class KubernetesExecutor:
         if handle.job_id is None:
             return TaskStatus.FAILED
         proc = await asyncio.create_subprocess_exec(
-            self._kubectl, "get", "pod", handle.job_id,
-            "-o", "jsonpath={.status.phase}", "-n", self._namespace,
+            self._kubectl,
+            "get",
+            "pod",
+            handle.job_id,
+            "-o",
+            "jsonpath={.status.phase}",
+            "-n",
+            self._namespace,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
         )
@@ -104,7 +107,12 @@ class KubernetesExecutor:
         if handle.job_id is None:
             return
         await asyncio.create_subprocess_exec(
-            self._kubectl, "delete", "pod", handle.job_id, "-n", self._namespace,
+            self._kubectl,
+            "delete",
+            "pod",
+            handle.job_id,
+            "-n",
+            self._namespace,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
         )
