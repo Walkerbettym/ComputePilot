@@ -37,6 +37,7 @@ from computepilot.agent.provider import LLMProvider
 from computepilot.agent.vocabulary import VocabularyResolver
 from computepilot.models.workflow import Workflow
 from computepilot.policy.engine import PolicyEngine
+from computepilot.runtime.sentinel import ExecutionSentinel
 from computepilot.skills.base import Skill, SkillRegistry
 
 
@@ -99,6 +100,16 @@ class Conductor:
         self._cost = cost_estimator or CostEstimator()
         self._policy = policy_engine or PolicyEngine()
         self._sessions: dict[str, ConductorSession] = {}
+        self._sentinel: ExecutionSentinel | None = None
+
+    @property
+    def sentinel(self) -> ExecutionSentinel | None:
+        """The attached Executionsentinel, or None."""
+        return self._sentinel
+
+    def attach_sentinel(self, sentinel: ExecutionSentinel) -> None:
+        """Attach an ExecutionSentinel for progress monitoring."""
+        self._sentinel = sentinel
 
     # -- Session management ---------------------------------------------------
 
