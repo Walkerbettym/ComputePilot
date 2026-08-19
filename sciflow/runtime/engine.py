@@ -147,7 +147,7 @@ class Engine:
                     # This can happen with max_concurrency=0 or unresolvable dependencies.
                     run.status = RunStatus.FAILED
                     for tid, task_obj in [(t.id, t) for t in workflow.tasks]:
-                        if self._state.get_task_state(run.id, tid) is None or                            store.get_task_state(run.id, tid) in (TaskStatus.PENDING, TaskStatus.READY):
+                        if self._state.get_task_state(run.id, tid) is None or                            self._state.get_task_state(run.id, tid) in (TaskStatus.PENDING, TaskStatus.READY):
                             self._state.transition_task(
                                 run.id, tid, TaskStatus.SKIPPED,
                                 error="deadlock: no ready tasks available"

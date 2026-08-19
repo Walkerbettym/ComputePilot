@@ -1,28 +1,183 @@
 # ComputePilot
 
-> 面向科学计算的开源 Agentic Workflow Runtime —— 让科研人员通过自然语言生成可验证、可执行、可恢复、可复现的计算工作流。
+> **面向科学计算的开源 Agentic Workflow Runtime — 让科研人员通过自然语言生成可验证、可执行、可恢复、可复现的计算工作流。**
 
 **Agent + Workflow + Reproducibility**
 
-用户用自然语言描述计算实验,ComputePilot 生成可执行的工作流 DAG,在本地、Docker 或 Slurm 集群上可靠运行,自动处理失败诊断与恢复,最终产出可复现的实验报告。
-
-三个核心能力:
+用户用自然语言描述计算实验，ComputePilot 生成可执行的工作流 DAG，在本地、Docker 或 Slurm 集群上可靠运行，自动处理失败诊断与恢复，最终产出可复现的实验报告。
 
 ```
 理解 → 规划 → 执行(可靠运行时) → 复现(产物 + 溯源)
 ```
 
+---
+
+## 核心设计原则
+
+| 原则 | 说明 |
+|---|---|
+| **Agent ≠ Runtime** | Agent 负责理解/规划/诊断；Runtime 负责执行/调度/状态/重试。Runtime 零 LLM 依赖 |
+| **Workflow First** | Agent 输出结构化 Workflow，而非 shell 命令 |
+| **Everything Reproducible** | 每次运行保存 code/config/workflow/params/logs/结果/sha256 |
+| **Human-in-the-loop** | 高成本操作允许人工批准 |
+| **Local First** | 先支持 Local → Docker → Slurm，后接云 |
+
+---
+
+## 安装
+
+需要 **Python ≥ 3.11**。
+
+```bash
+# 1. 克隆仓库
+git clone https://github.com/Walkerbettym/ComputePilot.git
+cd ComputePilot
+
+# 2. 创建虚拟环境并安装
+python -m venv .venv
+source .venv/bin/activate
+pip install -e ".[dev]"
+
+# 3. 验证
+sciflow --help
+```
+
+---
+
+## 5 分钟快速开始
+
+### 0. 初始化一个工作流项目
+
+```bash
+sciflow init my_experiment
+cd my_experiment
+```
+
+这会生成 `workflow.yaml`：
+
+```yaml
+name: my_workflow
+description: "My ComputePilot workflow"
+tasks:
+  - id: hello
+    command: echo "Hello, ComputePilot!"
+    type: shell
+```
+
+### 1. 校验
+
+```bash
+sciflow validate workflow.yaml
+# ✓ 校验通过
+```
+
+### 2. 运行
+
+```bash
+sciflow run workflow.yaml
+# 确认执行？[Y/n]
+```
+
+### 3. 查看状态与日志
+
+```bash
+sciflow status            # 查看所有运行
+sciflow status <run-id>   # 查看某个运行详情
+sciflow logs <run-id>     # 查看任务事件日志
+```
+
+### 4. 从自然语言生成工作流（Agent）
+
+```bash
+# 需要设置 OpenAI 兼容 API（或设置 SCIFLOW_LLM_PROVIDER）
+export SCIFLOW_LLM_API_KEY="sk-..."
+export SCIFLOW_LLM_MODEL="gpt-4o-mini"
+
+sciflow plan "Run a parameter sweep from 1 to 100 with 10 points, use 8 CPUs"
+# → 生成 workflow.yaml + 成本估算
+```
+
+### 5. 崩溃恢复
+
+如果运行中途被杀，可以恢复：
+
+```bash
+sciflow resume <run-id>
+# 从最后一个成功任务继续，不丢已完成、不重复执行
+```
+
+### 6. 产物与溯源报告
+
+```bash
+sciflow artifacts <run-id>   # 列出制品（路径/sha256/大小）
+sciflow report <run-id>      # 生成 report.md + manifest.json（可复现）
+```
+
+---
+
+## 四个 Demo（也是 e2e 测试）
+
+| Demo | 场景 | 验证 |
+|---|---|---|
+| **Demo 1** | 端到端参数扫描（generate→simulate→analyze→visualize） | 50 任务全过 + 产物生成 |
+| **Demo 2** | 失败诊断修复（OOM→升内存→重试→成功） | task_events 含 retrying + 内存修复生效 |
+| **Demo 3** | 崩溃恢复（kill→resume→不丢不重） | 已完成任务不重跑，最终全部完成 |
+| **Demo 4** | 可复现性（相同输入→相同 sha256；不同→不同） | artifact checksum 可区分 |
+
+一键运行全部：`./scripts/make_demo.sh --coverage`
+
+---
+
 ## 文档
 
-- [`spec.md`](spec.md) — 项目落地规格说明书(22 章 + 附录,详细设计规格)
-- [`mark.md`](mark.md) — 原始项目设计方案(32 节)
+- [`spec.md`](spec.md) — 落地规格说明书（22 章，v0.1 唯一实现依据）
+- [`mark.md`](mark.md) — 原始项目设计方案（32 节）
+- [`docs/architecture.md`](docs/architecture.md) — 系统架构
 - [`2604.21910.pdf`](2604.21910.pdf) — 相关论文
 
-## 核心理念
+---
 
-> **先做一个真正能用的软件 → 再加入 Agent → 再加入 Scientific Computing → 最后自然长出研究问题。**
+## 命令速查
 
-不是为论文做 benchmark,而是先做一个真的有用的工程系统,然后从工程问题里长出研究问题。
+| 命令 | 作用 |
+|---|---|
+| `sciflow init` | 初始化工作流项目 |
+| `sciflow validate` | 校验 workflow.yaml（24 条规则） |
+| `sciflow run` | 执行工作流（Local/Docker/Slurm） |
+| `sciflow plan` | 从自然语言生成工作流 |
+| `sciflow status` | 查看运行状态 |
+| `sciflow logs` | 查看任务事件日志 |
+| `sciflow resume` | 从检查点恢复 |
+| `sciflow cancel` | 取消运行 |
+| `sciflow artifacts` | 列出制品 |
+| `sciflow report` | 生成溯源报告 |
+| `sciflow skill` | 管理技能注册表 |
+
+---
+
+## 开发
+
+```bash
+# 类型检查（strict）
+mypy --strict sciflow/
+
+# 代码风格
+ruff check sciflow/ tests/ scripts/
+
+# 依赖方向检查（runtime 不允许 imports agent）
+python scripts/check_deps.py
+
+# 运行全部测试（unit + integration + e2e）
+pytest tests/unit/ tests/integration/ tests/e2e/ --cov=sciflow
+```
+
+CI 每次 push 自动运行上述全部检查（含 coverage ≥ 60%）。
+
+---
+
+## 技术栈
+
+Python ≥3.11 · Pydantic v2 · Typer · asyncio · SQLite · Rich · PyYAML · httpx · pytest · ruff · mypy
 
 ## 许可
 

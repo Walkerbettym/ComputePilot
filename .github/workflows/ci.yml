@@ -21,8 +21,10 @@ jobs:
       - name: Install project + dev dependencies
         run: pip install -e ".[dev]"
 
-      - name: Lint (ruff)
-        run: ruff check sciflow/ tests/ scripts/
+      - name: Lint (ruff check + format check)
+        run: |
+          ruff check sciflow/ tests/ scripts/
+          ruff format --check sciflow/ tests/ scripts/
 
       - name: Type check (mypy --strict)
         run: mypy --strict sciflow/
