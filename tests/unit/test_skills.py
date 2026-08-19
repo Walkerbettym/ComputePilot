@@ -101,7 +101,7 @@ class TestSkillRegistry:
         registry = SkillRegistry()
         registry.register_builtins()
         names = {s.name for s in registry.list_all()}
-        assert names == {"python", "shell", "slurm", "docker"}
+        assert names == {"python", "shell", "slurm", "docker", "population_genetics"}
 
     def test_load_from_yaml(self, tmp_path: Path) -> None:
         yaml_content = """

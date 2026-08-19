@@ -107,14 +107,23 @@ class EnvironmentProbe:
         except AttributeError:
             avcpus = os.cpu_count() or 1
 
-        # 3. Measure available memory
+        # 3. Measure available memory (from /proc/meminfo on Linux)
+        avmem = 8 * 1024 * 1024 * 1024  # 8GB fallback
         try:
-            import resource
-
-            soft, hard = resource.getrlimit(resource.RLIMIT_AS)
-            avmem = 8 * 1024 * 1024 * 1024 if soft == resource.RLIM_INFINITY else soft
-        except (OSError, ImportError, AttributeError):
-            avmem = 8 * 1024 * 1024 * 1024
+            with open("/proc/meminfo") as proc_mem:  # noqa: PTH123
+                for line in proc_mem:
+                    if line.startswith("MemTotal:"):
+                        # MemTotal is in kB
+                        avmem = int(line.split()[1]) * 1024
+                        break
+        except (OSError, FileNotFoundError):  # noqa: PERF203
+            try:
+                import resource
+                soft, _hard = resource.getrlimit(resource.RLIMIT_AS)
+                if soft != resource.RLIM_INFINITY:
+                    avmem = soft
+            except (ImportError, OSError, AttributeError):
+                pass
 
         # 4. Check GPUs
         avgpus = 0

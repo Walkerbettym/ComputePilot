@@ -88,13 +88,20 @@ class SkillRegistry:
         self._skills[skill.name] = skill
 
     def register_builtins(self) -> None:
-        """Register all built-in skills."""
+        """Register all built-in skills (v0.2: includes population_genetics)."""
         from computepilot.skills.docker import docker_skill
+        from computepilot.skills.population_genetics import population_genetics_skill
         from computepilot.skills.python import python_skill
         from computepilot.skills.shell import shell_skill
         from computepilot.skills.slurm import slurm_skill
 
-        for skill in (python_skill, shell_skill, slurm_skill, docker_skill):
+        for skill in (
+            python_skill,
+            shell_skill,
+            slurm_skill,
+            docker_skill,
+            population_genetics_skill,
+        ):
             self.register(skill)
 
     def get(self, name: str) -> Skill | None:

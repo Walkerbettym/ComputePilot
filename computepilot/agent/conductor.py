@@ -121,10 +121,9 @@ class Conductor:
     ) -> TurnResponse:
         """Process a single user turn synchronously.
 
-        This is a convenience wrapper for simple/CLI usage.
-        For async LLM calls, use :meth:`turn`.
+        Uses the LLM provider for intent extraction when available;
+        falls back to rule-based vocabulary resolution otherwise.
         """
-        _ = self._provider  # kept for interface consistency
         return self._process_turn(session_id, user_input)
 
     async def turn(

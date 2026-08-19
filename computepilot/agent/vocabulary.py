@@ -84,21 +84,31 @@ class VocabularyResolver:
     # ------------------------------------------------------------------
 
     def _tokenize(self, query: str) -> list[str]:
-        """Split *query* into candidate tokens for resolution."""
+        """Split *query* into candidate tokens for resolution.
+        Generates n-grams up to max_vocab_width, filters stopwords/numbers."""
         raw = query.lower().strip()
         if not raw:
             return []
 
+        stopwords = {"a", "an", "the", "on", "in", "at", "for", "to", "of",
+                     "with", "and", "or", "between", "run", "do", "is", "it"}
+
         tokens: list[str] = []
-        # Try multi-word n-grams first (e.g. "chromosome 22")
         words = raw.split()
-        for size in range(min(4, len(words)), 0, -1):
-            i = 0
-            while i + size <= len(words):
+        max_ngram = min(4, len(words))
+        for size in range(max_ngram, 0, -1):
+            for i in range(len(words) - size + 1):
                 ngram = " ".join(words[i : i + size])
-                if ngram not in tokens:
-                    tokens.append(ngram)
-                i += 1
+                if ngram in tokens:
+                    continue
+                # Skip tokens that are pure numbers (e.g. "22" won't match vocab)
+                if all(w.isdigit() for w in ngram.split()) and size == 1:
+                    continue
+                # Skip tokens where every word is a stopword
+                wset = set(ngram.split())
+                if wset and wset.issubset(stopwords) and size > 1:
+                    continue
+                tokens.append(ngram)
         return tokens
 
     def _resolve_single(self, token: str, skill_name: str | None = None) -> ResolvedToken | None:
