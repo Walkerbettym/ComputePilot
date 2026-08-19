@@ -119,6 +119,7 @@ class EnvironmentProbe:
         except (OSError, FileNotFoundError):  # noqa: PERF203
             try:
                 import resource
+
                 soft, _hard = resource.getrlimit(resource.RLIMIT_AS)
                 if soft != resource.RLIM_INFINITY:
                     avmem = soft

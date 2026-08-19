@@ -90,8 +90,25 @@ class VocabularyResolver:
         if not raw:
             return []
 
-        stopwords = {"a", "an", "the", "on", "in", "at", "for", "to", "of",
-                     "with", "and", "or", "between", "run", "do", "is", "it"}
+        stopwords = {
+            "a",
+            "an",
+            "the",
+            "on",
+            "in",
+            "at",
+            "for",
+            "to",
+            "of",
+            "with",
+            "and",
+            "or",
+            "between",
+            "run",
+            "do",
+            "is",
+            "it",
+        }
 
         tokens: list[str] = []
         words = raw.split()
