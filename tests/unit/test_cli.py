@@ -36,7 +36,11 @@ class TestCliBasic:
     def test_help_shows_commands(self) -> None:
         result = runner.invoke(app, ["--help"])
         assert result.exit_code == 0
-        for cmd in ["init", "validate", "run", "plan", "status", "logs", "resume", "cancel", "artifacts", "report", "skill"]:
+        cmds = (
+            "init", "validate", "run", "plan", "status", "logs",
+            "resume", "cancel", "artifacts", "report", "skill",
+        )
+        for cmd in cmds:
             assert cmd in result.stdout
 
     def test_validate_invalid_yaml(self, tmp_path) -> None:
