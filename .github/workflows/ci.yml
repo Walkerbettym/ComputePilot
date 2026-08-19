@@ -23,11 +23,11 @@ jobs:
 
       - name: Lint (ruff check + format check)
         run: |
-          ruff check sciflow/ tests/ scripts/
-          ruff format --check sciflow/ tests/ scripts/
+          ruff check computepilot/ tests/ scripts/
+          ruff format --check computepilot/ tests/ scripts/
 
       - name: Type check (mypy --strict)
-        run: mypy --strict sciflow/
+        run: mypy --strict computepilot/
 
       - name: Dependency direction check (runtime → agent)
         run: python scripts/check_deps.py
@@ -35,7 +35,7 @@ jobs:
       - name: Unit + Integration tests
         run: >
           pytest tests/unit/ tests/integration/
-          --cov=sciflow --cov-report=term-missing
+          --cov=computepilot --cov-report=term-missing
           --cov-fail-under=60
         timeout-minutes: 5
 
