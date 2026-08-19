@@ -1,4 +1,5 @@
 """Test all CLI commands using CliRunner (isolated, no actual subprocess)."""
+
 from __future__ import annotations
 
 import sys
@@ -37,8 +38,17 @@ class TestCliBasic:
         result = runner.invoke(app, ["--help"])
         assert result.exit_code == 0
         cmds = (
-            "init", "validate", "run", "plan", "status", "logs",
-            "resume", "cancel", "artifacts", "report", "skill",
+            "init",
+            "validate",
+            "run",
+            "plan",
+            "status",
+            "logs",
+            "resume",
+            "cancel",
+            "artifacts",
+            "report",
+            "skill",
         )
         for cmd in cmds:
             assert cmd in result.stdout
@@ -73,6 +83,7 @@ class TestCliRun:
 class TestCliStatus:
     def test_status_no_db(self, monkeypatch) -> None:
         import pathlib
+
         monkeypatch.setattr(pathlib.Path, "exists", lambda *a: False)
         result = runner.invoke(app, ["status"])
         assert result.exit_code == 0
@@ -82,6 +93,7 @@ class TestCliStatus:
 class TestCliLogs:
     def test_logs_no_db(self, monkeypatch) -> None:
         import pathlib
+
         monkeypatch.setattr(pathlib.Path, "exists", lambda *a: False)
         result = runner.invoke(app, ["logs", "some-run"])
         assert result.exit_code == 0
@@ -91,6 +103,7 @@ class TestCliLogs:
 class TestCliCancel:
     def test_cancel_no_db(self, monkeypatch) -> None:
         import pathlib
+
         monkeypatch.setattr(pathlib.Path, "exists", lambda *a: False)
         result = runner.invoke(app, ["cancel", "some-run"])
         assert result.exit_code == 0
@@ -100,6 +113,7 @@ class TestCliCancel:
 class TestCliArtifacts:
     def test_artifacts_no_db(self, monkeypatch) -> None:
         import pathlib
+
         monkeypatch.setattr(pathlib.Path, "exists", lambda *a: False)
         result = runner.invoke(app, ["artifacts", "some-run"])
         assert result.exit_code == 0
@@ -109,6 +123,7 @@ class TestCliArtifacts:
 class TestCliReport:
     def test_report_no_db(self, monkeypatch) -> None:
         import pathlib
+
         monkeypatch.setattr(pathlib.Path, "exists", lambda *a: False)
         result = runner.invoke(app, ["report", "some-run"])
         assert result.exit_code == 0

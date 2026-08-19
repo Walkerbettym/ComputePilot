@@ -1,4 +1,5 @@
 """Tests for Kubernetes and FakeKubernetes executors."""
+
 from __future__ import annotations
 
 import pytest
