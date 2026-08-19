@@ -4,9 +4,9 @@ These tests measure:
 - 100-task DAG scheduling overhead (< 100ms)
 - CLI cold start (< 1s)
 """
+
 from __future__ import annotations
 
-import asyncio
 import time
 from pathlib import Path
 
@@ -39,14 +39,17 @@ def test_100_task_scheduling_overhead() -> None:
 @pytest.mark.perf
 def test_100_task_dag_reduce() -> None:
     """Ready-task computation for 100 tasks should be fast."""
-    tasks = [Task(id=f"t{i:03d}", command="echo", depends_on=[f"t{i-1:03d}"] if i > 0 else []) for i in range(100)]
+    tasks = [
+        Task(id=f"t{i:03d}", command="echo", depends_on=[f"t{i - 1:03d}"] if i > 0 else [])
+        for i in range(100)
+    ]
     wf = Workflow(name="perf-chain", tasks=tasks)
     dag = build_dag(wf)
 
     start = time.perf_counter()
     completed = set()
     for i in range(100):
-        ready = dag.ready_tasks(completed)
+        dag.ready_tasks(completed)  # noqa: F841
         completed.add(f"t{i:03d}")
     elapsed = (time.perf_counter() - start) * 1000
 

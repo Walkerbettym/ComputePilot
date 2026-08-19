@@ -141,9 +141,7 @@ class TestEngineResume:
             run_dir=tmp_path / "run_dir",
         )
         store.create_run(run)
-        store.transition_task(
-            run.id, "a", TaskStatus.SUCCEEDED, exit_code=0
-        )
+        store.transition_task(run.id, "a", TaskStatus.SUCCEEDED, exit_code=0)
 
         # Engine resume should skip 'a' and run only 'b'
         engine = Engine(state=store, executor=executor, max_concurrency=2)

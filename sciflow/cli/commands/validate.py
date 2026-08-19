@@ -12,9 +12,7 @@ from sciflow.workflow.validator import validate
 
 
 def validate_workflow(
-    workflow_path: str = typer.Argument(
-        ..., help="Path to workflow.yaml", metavar="WORKFLOW"
-    ),
+    workflow_path: str = typer.Argument(..., help="Path to workflow.yaml", metavar="WORKFLOW"),
 ) -> None:
     """Validate a workflow YAML file."""
     path = Path(workflow_path)

@@ -123,14 +123,11 @@ with open('checksum.txt', 'w') as f:
     cs1 = _file_checksums(run_dir1)
     cs2 = _file_checksums(run_dir2)
 
-    assert cs1.keys() == cs2.keys(), (
-        f"artifact sets differ: {cs1.keys()} vs {cs2.keys()}"
-    )
+    assert cs1.keys() == cs2.keys(), f"artifact sets differ: {cs1.keys()} vs {cs2.keys()}"
 
     for filename in cs1:
         assert cs1[filename] == cs2[filename], (
-            f"checksum mismatch for {filename}: "
-            f"{cs1[filename]} != {cs2[filename]}"
+            f"checksum mismatch for {filename}: {cs1[filename]} != {cs2[filename]}"
         )
 
 

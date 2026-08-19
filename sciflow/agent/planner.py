@@ -35,8 +35,7 @@ class Planner:
         # Build the primary task
         command = self._build_command(intent)
         id_slug = (
-            f"{intent.verb}_{intent.target}"
-            .replace(" ", "_")
+            f"{intent.verb}_{intent.target}".replace(" ", "_")
             .replace("-", "_")
             .replace(".", "_")
             .lower()[:64]

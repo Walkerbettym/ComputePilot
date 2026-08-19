@@ -27,9 +27,7 @@ class CountingExecutor(LocalExecutor):
         super().__init__()
         self.submission_count: int = 0
 
-    async def submit(
-        self, task: Task, run_dir: str, env: dict[str, str]
-    ) -> object:
+    async def submit(self, task: Task, run_dir: str, env: dict[str, str]) -> object:
         self.submission_count += 1
         return await super().submit(task, run_dir, env)
 
@@ -106,9 +104,7 @@ async def test_demo3_crash_recovery(
         run_dir=str(run_dir),
     )
 
-    assert resumed.status == RunStatus.SUCCEEDED, (
-        f"resumed run status: {resumed.status}"
-    )
+    assert resumed.status == RunStatus.SUCCEEDED, f"resumed run status: {resumed.status}"
 
     # Task 'a' was submitted once (manually). Task 'b' was submitted once (via resume).
     # Total: 2 submissions. If the engine re-submitted 'a', the count would be higher.

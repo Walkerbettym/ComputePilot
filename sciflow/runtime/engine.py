@@ -146,11 +146,14 @@ class Engine:
                     # No tasks in flight, nothing ready, but pending exist — deadlock.
                     # This can happen with max_concurrency=0 or unresolvable dependencies.
                     run.status = RunStatus.FAILED
-                    for tid, task_obj in [(t.id, t) for t in workflow.tasks]:
-                        if self._state.get_task_state(run.id, tid) is None or                            self._state.get_task_state(run.id, tid) in (TaskStatus.PENDING, TaskStatus.READY):
+                    for tid, _task in [(t.id, t) for t in workflow.tasks]:
+                        state = self._state.get_task_state(run.id, tid)
+                        if state is None or state in (TaskStatus.PENDING, TaskStatus.READY):
                             self._state.transition_task(
-                                run.id, tid, TaskStatus.SKIPPED,
-                                error="deadlock: no ready tasks available"
+                                run.id,
+                                tid,
+                                TaskStatus.SKIPPED,
+                                error="deadlock: no ready tasks available",
                             )
                     break
 
@@ -277,8 +280,10 @@ class Engine:
                     run.status = RunStatus.FAILED
                     for tid in list(running_tasks.keys()):
                         self._state.transition_task(
-                            run.id, tid, TaskStatus.SKIPPED,
-                            error="deadlock: no ready tasks available"
+                            run.id,
+                            tid,
+                            TaskStatus.SKIPPED,
+                            error="deadlock: no ready tasks available",
                         )
                     break
 

@@ -120,4 +120,3 @@ def build_task_summary(task_states: list[dict[str, Any]]) -> dict[str, int]:
     for ts in task_states:
         counter[ts.get("status", "unknown")] += 1
     return dict(counter)
-

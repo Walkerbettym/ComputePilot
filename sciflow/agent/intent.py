@@ -39,13 +39,13 @@ extract structured intent as a JSON object conforming to the schema below.
 
 The fields are:
 """
-    "- verb: The primary action (e.g., \"run\", \"train\", \"evaluate\", \"preprocess\", "
+    '- verb: The primary action (e.g., "run", "train", "evaluate", "preprocess", '
     '"simulate", "benchmark").\n'
     "- target: The thing the action applies to (e.g., model name, dataset, "
     "script path, experiment name).\n"
     "- parameters: A dict of key-value pairs for important parameters "
     "(e.g., learning rate, epochs, batch size, input files).\n"
-    "- resources: A dict with cpu (int), memory (str like \"2GB\"), gpu (int) "
+    '- resources: A dict with cpu (int), memory (str like "2GB"), gpu (int) '
     "- infer from the request or use defaults.\n"
     "- constraints: A list of explicit constraints "
     "(time limits, accuracy requirements, budget limits, etc.).\n"

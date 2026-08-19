@@ -102,7 +102,6 @@ class StateStore:
         )
         self._conn.commit()
 
-
     def update_run_status(self, run_id: str, status: RunStatus) -> None:
         now = datetime.now().isoformat()
         if status == RunStatus.RUNNING:
@@ -123,9 +122,7 @@ class StateStore:
         self._conn.commit()
 
     def get_run(self, run_id: str) -> dict[str, Any] | None:
-        row = self._conn.execute(
-            "SELECT * FROM runs WHERE id = ?", (run_id,)
-        ).fetchone()
+        row = self._conn.execute("SELECT * FROM runs WHERE id = ?", (run_id,)).fetchone()
         if row is None:
             return None
         return dict(row)
@@ -150,16 +147,29 @@ class StateStore:
                 "CASE WHEN ? = ? THEN ? ELSE NULL END, "
                 "CASE WHEN ? IN (?, ?) THEN ? ELSE NULL END)",
                 (
-                    run_id, task_id, status.value, attempt, exit_code, error,
-                    status.value, TaskStatus.RUNNING.value, now,
-                    status.value, TaskStatus.SUCCEEDED.value, TaskStatus.FAILED.value, now,
+                    run_id,
+                    task_id,
+                    status.value,
+                    attempt,
+                    exit_code,
+                    error,
+                    status.value,
+                    TaskStatus.RUNNING.value,
+                    now,
+                    status.value,
+                    TaskStatus.SUCCEEDED.value,
+                    TaskStatus.FAILED.value,
+                    now,
                 ),
             )
             self._conn.execute(
                 "INSERT INTO task_events (run_id, task_id, event, at, payload) "
                 "VALUES (?, ?, ?, ?, ?)",
                 (
-                    run_id, task_id, status.value, now,
+                    run_id,
+                    task_id,
+                    status.value,
+                    now,
                     json.dumps({"exit_code": exit_code, "error": error}),
                 ),
             )

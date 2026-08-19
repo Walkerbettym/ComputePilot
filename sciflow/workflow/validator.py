@@ -93,8 +93,10 @@ def _check_structural(workflow: Workflow, report: ValidationReport) -> None:
         if t.type not in valid_types:
             report.errors.append(
                 ValidationError(
-                    "E-006", f"task '{t.id}' has invalid type '{t.type}'",
-                    "error", t.id,
+                    "E-006",
+                    f"task '{t.id}' has invalid type '{t.type}'",
+                    "error",
+                    t.id,
                 )
             )
 
@@ -137,9 +139,7 @@ def _check_dag(workflow: Workflow, report: ValidationReport) -> None:
         dag = DAG(workflow)
         cycle = dag.find_cycle()
         cycle_str = " -> ".join(cycle) if cycle else "unknown"
-        report.errors.append(
-            ValidationError("E-003", f"cycle detected: {cycle_str}", "error")
-        )
+        report.errors.append(ValidationError("E-003", f"cycle detected: {cycle_str}", "error"))
 
 
 # ---------------------------------------------------------------------------
@@ -176,9 +176,7 @@ def _check_resources(workflow: Workflow, report: ValidationReport) -> None:
         # E-103 — empty partition name
         if res.partition is not None and not res.partition.strip():
             report.errors.append(
-                ValidationError(
-                    "E-103", f"task '{t.id}' has empty partition name", "error", t.id
-                )
+                ValidationError("E-103", f"task '{t.id}' has empty partition name", "error", t.id)
             )
 
         # E-104 — GPU requested with walltime > 7 days
@@ -305,22 +303,20 @@ def _check_scientific(workflow: Workflow, report: ValidationReport) -> None:
         # W-101 — no random seed detected
         env_str = (
             " ".join(t.environment.keys())
-            + " " + " ".join(t.environment.values())
-            + " " + " ".join(t.args)
+            + " "
+            + " ".join(t.environment.values())
+            + " "
+            + " ".join(t.args)
         )
         if "seed" not in env_str.lower() and "random" not in env_str.lower():
             report.errors.append(
-                ValidationError(
-                    "W-101", f"task '{t.id}': no random seed detected", "warning", t.id
-                )
+                ValidationError("W-101", f"task '{t.id}': no random seed detected", "warning", t.id)
             )
 
         # W-102 — checkpointing disabled
         if not t.checkpoint:
             report.errors.append(
-                ValidationError(
-                    "W-102", f"task '{t.id}': checkpointing disabled", "warning", t.id
-                )
+                ValidationError("W-102", f"task '{t.id}': checkpointing disabled", "warning", t.id)
             )
 
         # W-103 — no retry policy configured (max_attempts == 1)

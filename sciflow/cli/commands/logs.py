@@ -23,25 +23,20 @@ def _get_db() -> sqlite3.Connection:
 
 def logs(
     run_id: str = typer.Argument(..., help="Run ID", metavar="RUN_ID"),
-    task_id: str | None = typer.Option(
-        None, "--task", "-t", help="Filter by task ID"
-    ),
+    task_id: str | None = typer.Option(None, "--task", "-t", help="Filter by task ID"),
     tail: int = typer.Option(50, "--tail", "-n", help="Number of lines to show"),
 ) -> None:
     """Show task event logs for a run."""
     conn = _get_db()
 
     # Verify run exists
-    run_row = conn.execute(
-        "SELECT id FROM runs WHERE id = ?", (run_id,)
-    ).fetchone()
+    run_row = conn.execute("SELECT id FROM runs WHERE id = ?", (run_id,)).fetchone()
     if run_row is None:
         console.print(f"[red]❌ Run '{run_id}' not found[/red]")
         raise typer.Exit(1)
 
     rows = conn.execute(
-        "SELECT task_id, event, at, payload FROM task_events WHERE run_id = ? "
-        "ORDER BY id ASC",
+        "SELECT task_id, event, at, payload FROM task_events WHERE run_id = ? ORDER BY id ASC",
         (run_id,),
     ).fetchall()
 

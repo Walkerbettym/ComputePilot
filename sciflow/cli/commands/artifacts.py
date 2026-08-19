@@ -36,9 +36,7 @@ def artifacts(
 
     console.print(f"[bold]Artifacts for run {run_id}:[/bold]")
     for art in artifacts_list:
-        console.print(
-            f"  {art['id'][:12]}  {art['type']:<12}  {art['size']:>8} B  {art['path']}"
-        )
+        console.print(f"  {art['id'][:12]}  {art['type']:<12}  {art['size']:>8} B  {art['path']}")
 
     # Also output JSON for scripting
     console.print(json.dumps(artifacts_list, indent=2))

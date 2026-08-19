@@ -21,13 +21,10 @@ docker_skill = Skill(
         "privileged": False,
     },
     error_handling={
-        "image_not_found": ErrorAction(
-            action="pull_image", params={"auto_pull": True}
-        ),
+        "image_not_found": ErrorAction(action="pull_image", params={"auto_pull": True}),
         "port_conflict": ErrorAction(
             action="retry", params={"max_retries": 3, "port_offset": True}
         ),
         "disk_full": ErrorAction(action="cleanup", params={"prune": True}),
     },
 )
-

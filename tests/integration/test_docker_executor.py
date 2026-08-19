@@ -1,4 +1,5 @@
 """Integration tests for the DockerExecutor."""
+
 from __future__ import annotations
 
 import asyncio
@@ -144,7 +145,7 @@ async def test_docker_executor_env_vars() -> None:
     task = Task(
         id="docker-env",
         command="sh",
-        args=["-c", 'echo $MY_VAR'],
+        args=["-c", "echo $MY_VAR"],
         environment={"MY_VAR": "docker_test_value"},
     )
     handle = await exe.submit(task, "/tmp", {})

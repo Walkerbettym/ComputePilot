@@ -56,6 +56,8 @@ def add_skill(path: str) -> None:
     _registry.register(skill)
     msg = f"[green]✓[/green] Registered skill '[bold]{skill.name}[/bold]' ({skill.version})"
     console.print(msg)
+
+
 skill_app = typer.Typer(help="Manage registered skills")
 
 

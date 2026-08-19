@@ -237,9 +237,7 @@ def test_e104_gpu_long_walltime() -> None:
             Task.model_construct(
                 id="a",
                 command="cmd",
-                resources=Resources.model_construct(
-                    gpu=1, walltime=timedelta(days=8)
-                ),
+                resources=Resources.model_construct(gpu=1, walltime=timedelta(days=8)),
             )
         ],
     )
@@ -363,9 +361,7 @@ def test_w101_no_random_seed() -> None:
 
 
 def test_w101_suppressed_by_seed_env() -> None:
-    wf = _make_workflow(
-        tasks=[Task(id="a", command="python run.py", environment={"SEED": "42"})]
-    )
+    wf = _make_workflow(tasks=[Task(id="a", command="python run.py", environment={"SEED": "42"})])
     report = validate(wf)
     assert not any(e.code == "W-101" for e in report.errors)
 
@@ -423,9 +419,7 @@ def test_w103_suppressed_by_retry() -> None:
 
 def test_w104_large_cpu() -> None:
     wf = _make_workflow(
-        tasks=[
-            Task(id="a", command="cmd", resources=Resources(cpu=128, memory="4GB"))
-        ]
+        tasks=[Task(id="a", command="cmd", resources=Resources(cpu=128, memory="4GB"))]
     )
     report = validate(wf)
     assert report.passed
@@ -434,11 +428,7 @@ def test_w104_large_cpu() -> None:
 
 def test_w104_large_gpu() -> None:
     wf = _make_workflow(
-        tasks=[
-            Task(
-                id="a", command="cmd", resources=Resources(cpu=4, gpu=16, memory="4GB")
-            )
-        ]
+        tasks=[Task(id="a", command="cmd", resources=Resources(cpu=4, gpu=16, memory="4GB"))]
     )
     report = validate(wf)
     assert report.passed
@@ -458,9 +448,7 @@ def test_w105_no_timeout() -> None:
 
 
 def test_w105_suppressed_by_timeout() -> None:
-    wf = _make_workflow(
-        tasks=[Task(id="a", command="cmd", timeout=timedelta(hours=1))]
-    )
+    wf = _make_workflow(tasks=[Task(id="a", command="cmd", timeout=timedelta(hours=1))])
     report = validate(wf)
     assert not any(e.code == "W-105" for e in report.errors)
 
@@ -486,9 +474,7 @@ def test_valid_workflow_passes() -> None:
 
 
 def test_valid_workflow_with_seed_passes() -> None:
-    wf = _make_workflow(
-        tasks=[Task(id="a", command="python train.py", args=["--seed", "42"])]
-    )
+    wf = _make_workflow(tasks=[Task(id="a", command="python train.py", args=["--seed", "42"])])
     report = validate(wf)
     assert report.passed
 

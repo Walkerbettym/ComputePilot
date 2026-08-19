@@ -83,18 +83,14 @@ class TestTransitionTask:
     def test_transition_to_succeeded(self, store: StateStore, sample_run: Run) -> None:
         store.create_run(sample_run)
         store.transition_task(sample_run.id, "task-a", TaskStatus.RUNNING)
-        store.transition_task(
-            sample_run.id, "task-a", TaskStatus.SUCCEEDED, exit_code=0
-        )
+        store.transition_task(sample_run.id, "task-a", TaskStatus.SUCCEEDED, exit_code=0)
         state = store.get_task_state(sample_run.id, "task-a")
         assert state == TaskStatus.SUCCEEDED
 
     def test_transition_to_failed(self, store: StateStore, sample_run: Run) -> None:
         store.create_run(sample_run)
         store.transition_task(sample_run.id, "task-a", TaskStatus.RUNNING)
-        store.transition_task(
-            sample_run.id, "task-a", TaskStatus.FAILED, exit_code=1, error="oops"
-        )
+        store.transition_task(sample_run.id, "task-a", TaskStatus.FAILED, exit_code=1, error="oops")
         state = store.get_task_state(sample_run.id, "task-a")
         assert state == TaskStatus.FAILED
 
@@ -118,22 +114,16 @@ class TestTransitionTask:
 
 
 class TestEvents:
-    def test_event_logged_on_transition(
-        self, store: StateStore, sample_run: Run
-    ) -> None:
+    def test_event_logged_on_transition(self, store: StateStore, sample_run: Run) -> None:
         store.create_run(sample_run)
         store.transition_task(sample_run.id, "task-a", TaskStatus.RUNNING)
-        store.transition_task(
-            sample_run.id, "task-a", TaskStatus.SUCCEEDED, exit_code=0
-        )
+        store.transition_task(sample_run.id, "task-a", TaskStatus.SUCCEEDED, exit_code=0)
         # Verify events produce no errors — schema is validated by SQLite
         assert store.get_task_state(sample_run.id, "task-a") == TaskStatus.SUCCEEDED
 
 
 class TestClose:
-    def test_close_twice_does_not_raise(
-        self, store: StateStore, sample_run: Run
-    ) -> None:
+    def test_close_twice_does_not_raise(self, store: StateStore, sample_run: Run) -> None:
         store.create_run(sample_run)
         store.close()
         # Second close is a no-op or raises sqlite3.ProgrammingError

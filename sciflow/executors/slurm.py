@@ -129,9 +129,7 @@ class SlurmExecutor:
         output = stdout.decode(errors="replace").strip()
 
         if proc.returncode != 0 or not output:
-            raise RuntimeError(
-                f"sbatch failed: {stderr.decode(errors='replace').strip()}"
-            )
+            raise RuntimeError(f"sbatch failed: {stderr.decode(errors='replace').strip()}")
 
         # Parse job_id from --parsable output (just the number)
         job_id = output.split(";")[0].strip()

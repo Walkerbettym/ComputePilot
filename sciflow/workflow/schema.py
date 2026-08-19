@@ -17,7 +17,5 @@ def load_workflow(path: str | Path) -> Workflow:
 
 def dump_workflow(wf: Workflow) -> str:
     """Serialize Workflow → YAML string."""
-    data = wf.model_dump(
-        exclude={"id", "sha256", "source", "created_at"}, mode="json"
-    )
+    data = wf.model_dump(exclude={"id", "sha256", "source", "created_at"}, mode="json")
     return yaml.dump(data, default_flow_style=False, sort_keys=False)

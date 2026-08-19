@@ -2,6 +2,7 @@
 
 Covers uncovered branches for coverage ≥ 80%.
 """
+
 from __future__ import annotations
 
 from datetime import timedelta
@@ -70,9 +71,7 @@ class _CrashOnSubmit:
     def validate_task(self, task: Task) -> list[str]:
         return []
 
-    async def submit(
-        self, task: Task, run_dir: str, env: dict[str, str]
-    ) -> Handle:
+    async def submit(self, task: Task, run_dir: str, env: dict[str, str]) -> Handle:
         raise RuntimeError("simulated submit crash")
 
     async def status(self, handle: Handle) -> TaskStatus:
@@ -131,9 +130,7 @@ class _FakeFailExecutor:
     def validate_task(self, task: Task) -> list[str]:
         return []
 
-    async def submit(
-        self, task: Task, run_dir: str, env: dict[str, str]
-    ) -> Handle:
+    async def submit(self, task: Task, run_dir: str, env: dict[str, str]) -> Handle:
         return Handle(task_id=task.id)
 
     async def status(self, handle: Handle) -> TaskStatus:
@@ -146,9 +143,7 @@ class _FakeFailExecutor:
         return ""
 
     async def collect(self, handle: Handle) -> TaskResult:
-        return TaskResult(
-            task_id=handle.task_id, ok=False, exit_code=1, error="always fail"
-        )
+        return TaskResult(task_id=handle.task_id, ok=False, exit_code=1, error="always fail")
 
 
 @pytest.mark.asyncio
@@ -191,9 +186,7 @@ class _OOMOnceExecutor:
     def validate_task(self, task: Task) -> list[str]:
         return []
 
-    async def submit(
-        self, task: Task, run_dir: str, env: dict[str, str]
-    ) -> Handle:
+    async def submit(self, task: Task, run_dir: str, env: dict[str, str]) -> Handle:
         c = self.count.get(task.id, 0) + 1
         self.count[task.id] = c
         return Handle(task_id=task.id)
@@ -286,9 +279,7 @@ class _RetryOnceExecutor:
     def validate_task(self, task: Task) -> list[str]:
         return []
 
-    async def submit(
-        self, task: Task, run_dir: str, env: dict[str, str]
-    ) -> Handle:
+    async def submit(self, task: Task, run_dir: str, env: dict[str, str]) -> Handle:
         c = self.count.get(task.id, 0) + 1
         self.count[task.id] = c
         return Handle(task_id=task.id)
@@ -536,9 +527,7 @@ async def test_engine_resume_partial_fail_task(tmp_path: Path) -> None:
     store.transition_task("resume-fail", "a", TaskStatus.SUCCEEDED, exit_code=0)
 
     engine = Engine(state=store, executor=LocalExecutor(), max_concurrency=2)
-    resumed = await engine.resume(
-        workflow=wf, run_id="resume-fail", run_dir=str(tmp_path)
-    )
+    resumed = await engine.resume(workflow=wf, run_id="resume-fail", run_dir=str(tmp_path))
     assert resumed.status == RunStatus.SUCCEEDED
     assert "b" in store.get_completed_tasks("resume-fail")
 
@@ -565,9 +554,7 @@ async def test_engine_resume_exception_marks_failed(tmp_path: Path) -> None:
     store.create_run(run)
 
     engine = Engine(state=store, executor=_CrashOnSubmit(), max_concurrency=1)
-    resumed = await engine.resume(
-        workflow=wf, run_id="resume-crash", run_dir=str(tmp_path)
-    )
+    resumed = await engine.resume(workflow=wf, run_id="resume-crash", run_dir=str(tmp_path))
     assert resumed.status == RunStatus.FAILED
 
 
@@ -587,9 +574,7 @@ class _SlowExecutor:
     def validate_task(self, task: Task) -> list[str]:
         return []
 
-    async def submit(
-        self, task: Task, run_dir: str, env: dict[str, str]
-    ) -> Handle:
+    async def submit(self, task: Task, run_dir: str, env: dict[str, str]) -> Handle:
         return Handle(task_id=task.id)
 
     async def status(self, handle: Handle) -> TaskStatus:

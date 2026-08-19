@@ -87,8 +87,6 @@ class DAG:
             for downstream in self._adj[tid]:
                 in_deg[downstream] -= 1
         ready = [
-            self._task_map[tid]
-            for tid, d in in_deg.items()
-            if d <= 0 and tid not in completed
+            self._task_map[tid] for tid, d in in_deg.items() if d <= 0 and tid not in completed
         ]
         return ready

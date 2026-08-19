@@ -21,10 +21,7 @@ def should_retry(result: TaskResult, policy: RetryPolicy) -> bool:
     """
     return not (
         result.ok
-        or (
-            result.exit_code is not None
-            and result.exit_code not in policy.retryable_exit_codes
-        )
+        or (result.exit_code is not None and result.exit_code not in policy.retryable_exit_codes)
     )
 
 

@@ -1,4 +1,5 @@
 """Docker executor using the docker CLI."""
+
 from __future__ import annotations
 
 import asyncio
@@ -87,9 +88,7 @@ class DockerExecutor:
 
         container_id = stdout.decode(errors="replace").strip()
         if proc.returncode != 0 or not container_id:
-            raise RuntimeError(
-                f"docker run failed: {stderr.decode(errors='replace').strip()}"
-            )
+            raise RuntimeError(f"docker run failed: {stderr.decode(errors='replace').strip()}")
 
         handle = Handle(task_id=task.id, job_id=container_name)
         self._handles[task.id] = handle

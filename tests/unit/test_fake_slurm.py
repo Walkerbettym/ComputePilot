@@ -68,6 +68,7 @@ class TestFakeSlurmCollect:
         result = await fake_slurm.collect(handle)
         assert fake_slurm.completed["test"] is result
 
+
 class TestFakeSlurmCapability:
     """Tests for FakeSlurmExecutor.capability()."""
 
@@ -108,6 +109,7 @@ class TestFakeSlurmValidate:
         task = Task(id="test", command="cmd")
         errors = fake_slurm.validate_task(task)
         assert errors == []
+
 
 def test_name() -> None:
     assert FakeSlurmExecutor.name == "fake_slurm"

@@ -20,9 +20,7 @@ def resume(
         "", "--workflow", "-w", help="Path to workflow.yaml (default: auto-detect)"
     ),
     executor: str = typer.Option("local", "--executor", "-e", help="Executor backend"),
-    max_concurrency: int = typer.Option(
-        4, "--max-concurrency", "-j", help="Max concurrent tasks"
-    ),
+    max_concurrency: int = typer.Option(4, "--max-concurrency", "-j", help="Max concurrent tasks"),
 ) -> None:
     """Resume a previously-started run, skipping completed tasks."""
     # Open the state store
@@ -44,8 +42,7 @@ def resume(
         wf_path = Path.cwd() / "workflow.yaml"
         if not wf_path.exists():
             console.print(
-                "[red]❌ Could not locate workflow.yaml. "
-                "Specify with --workflow / -w[/red]"
+                "[red]❌ Could not locate workflow.yaml. Specify with --workflow / -w[/red]"
             )
             raise typer.Exit(2)
 

@@ -59,7 +59,9 @@ class OpenAIProvider:
         import httpx
 
         self._api_key = api_key or os.environ.get("SCIFLOW_LLM_API_KEY", "")
-        self._base_url = (base_url or os.environ.get("SCIFLOW_LLM_BASE_URL", "https://api.openai.com/v1")).rstrip("/")
+        self._base_url = (
+            base_url or os.environ.get("SCIFLOW_LLM_BASE_URL", "https://api.openai.com/v1")
+        ).rstrip("/")
         self._model = model or os.environ.get("SCIFLOW_LLM_MODEL", _OPENAI_DEFAULT_MODEL)
         self._client = httpx.Client(
             base_url=self._base_url,

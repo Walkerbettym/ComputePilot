@@ -48,9 +48,7 @@ class DiagnoserAdapter:
             confidence=d.confidence,
             explanation=d.explanation,
             suggested_action=d.suggested_action,
-            repair=RepairSpec(action=d.repair.action, params=d.repair.params)
-            if d.repair
-            else None,
+            repair=RepairSpec(action=d.repair.action, params=d.repair.params) if d.repair else None,
         )
 
 

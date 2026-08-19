@@ -20,9 +20,7 @@ slurm_skill = Skill(
         "partition": None,
     },
     error_handling={
-        "job_failed": ErrorAction(
-            action="fetch_logs", params={"tail_lines": 50}
-        ),
+        "job_failed": ErrorAction(action="fetch_logs", params={"tail_lines": 50}),
         "node_failure": ErrorAction(
             action="resubmit",
             params={"max_retries": 3, "backoff": "linear"},
@@ -33,4 +31,3 @@ slurm_skill = Skill(
         ),
     },
 )
-

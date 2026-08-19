@@ -71,9 +71,7 @@ class LocalExecutor:
     async def collect(self, handle: Handle) -> TaskResult:
         proc = self._processes.get(handle.task_id)
         if proc is None:
-            return TaskResult(
-                task_id=handle.task_id, ok=False, exit_code=None, error="no process"
-            )
+            return TaskResult(task_id=handle.task_id, ok=False, exit_code=None, error="no process")
         stdout, stderr = await proc.communicate()
         ok = proc.returncode == 0
         outputs: dict[str, str] = {}

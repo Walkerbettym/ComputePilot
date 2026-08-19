@@ -1,4 +1,5 @@
 """Tests for example workflows — verifies they are valid and runnable."""
+
 from __future__ import annotations
 
 from pathlib import Path

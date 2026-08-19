@@ -62,6 +62,7 @@ class Executor(Protocol):
 @dataclass
 class RepairSpec:
     """Repair action specification for a failed task."""
+
     action: str = ""
     params: dict[str, Any] = field(default_factory=dict)
 
@@ -69,6 +70,7 @@ class RepairSpec:
 @dataclass
 class DiagnosisResult:
     """Result of a failure diagnosis."""
+
     task_id: str = ""
     cause: str = "UNKNOWN"
     confidence: float = 0.0
@@ -79,6 +81,7 @@ class DiagnosisResult:
 
 class DiagnosisHandler(Protocol):
     """Protocol for failure diagnosis handlers."""
-    def diagnose(self, task_id: str, exit_code: int | None,
-                    stderr: str = "") -> DiagnosisResult: ...
 
+    def diagnose(
+        self, task_id: str, exit_code: int | None, stderr: str = ""
+    ) -> DiagnosisResult: ...

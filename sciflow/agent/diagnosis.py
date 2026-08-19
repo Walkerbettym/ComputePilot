@@ -152,9 +152,7 @@ class Diagnoser:
         return any(p.search(text) for p in patterns)
 
     @staticmethod
-    def _build_explanation(
-        task_id: str, exit_code: int | None, stderr: str, cause: str
-    ) -> str:
+    def _build_explanation(task_id: str, exit_code: int | None, stderr: str, cause: str) -> str:
         code = str(exit_code) if exit_code is not None else "N/A"
         trunc = stderr[:200].replace("\n", " | ") if stderr else "(no stderr)"
         return f"Task {task_id} failed with exit_code={code}, cause={cause}. stderr: {trunc}"

@@ -18,13 +18,9 @@ from sciflow.workflow.validator import validate
 
 
 def run(
-    workflow_path: str = typer.Argument(
-        ..., help="Path to workflow.yaml", metavar="WORKFLOW"
-    ),
+    workflow_path: str = typer.Argument(..., help="Path to workflow.yaml", metavar="WORKFLOW"),
     executor: str = typer.Option("local", "--executor", "-e", help="Executor backend"),
-    max_concurrency: int = typer.Option(
-        4, "--max-concurrency", "-j", help="Max concurrent tasks"
-    ),
+    max_concurrency: int = typer.Option(4, "--max-concurrency", "-j", help="Max concurrent tasks"),
     approve: bool = typer.Option(
         False, "--approve", "-y", help="Auto-approve (no confirmation prompt)"
     ),
