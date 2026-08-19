@@ -205,3 +205,14 @@ class StateStore:
             (run_id, TaskStatus.SUCCEEDED.value, TaskStatus.FAILED.value, TaskStatus.SKIPPED.value),
         ).fetchall()
         return {r["task_id"] for r in rows}
+
+    def get_task_details(self, run_id: str, task_id: str) -> dict[str, Any] | None:
+        """Return full details for a specific task in a run."""
+        row = self._conn.execute(
+            "SELECT task_id, status, attempt, exit_code, error "
+            "FROM task_states WHERE run_id = ? AND task_id = ?",
+            (run_id, task_id),
+        ).fetchone()
+        if row is None:
+            return None
+        return dict(row)
