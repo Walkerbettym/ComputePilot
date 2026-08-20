@@ -30,6 +30,7 @@ EXAMPLES: list[tuple[str, int]] = [
     ("docker_worker", 2),
     ("data_processing", 3),
     ("cfd_parameter_sweep", 8),
+    ("openfoam_cylinder", 5),
 ]
 
 

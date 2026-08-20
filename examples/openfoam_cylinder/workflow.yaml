@@ -1,0 +1,117 @@
+name: openfoam_cylinder
+description: >
+  Real OpenFOAM simulation: incompressible flow over a cylinder at Re=150.
+  Uses OpenFOAM 11 in Docker. Runs blockMesh → simpleFoam → post-process.
+tasks:
+  - id: case_setup
+    type: docker
+    image: openfoam/openfoam11-paraview510
+    command: sh
+    args:
+      - "-c"
+      - |
+        # Copy the cylinder tutorial case
+        cp -r $FOAM_TUTORIALS/incompressible/simpleFoam/flowOverCylinder .
+        cd flowOverCylinder/constant
+        # Modify transport properties to set Re=150
+        sed -i 's/nu              \\[0 2 -1 0 0 0 0\\] 0.01;/nu              [0 2 -1 0 0 0 0] 0.006667;/' transportProperties
+        # Adjust inlet velocity for Re=150 (U*D/nu = 150, D=1, nu=0.006667, U=1)
+        cd ../0
+        sed -i 's/inletValue\\s*uniform\\s*(1 0 0);/inletValue uniform (1 0 0);/' U
+        echo "Case setup complete for Re=150"
+    outputs:
+      - flowOverCylinder/constant/transportProperties
+    resources:
+      cpu: 1
+      memory: 2GB
+
+  - id: blockmesh
+    type: docker
+    image: openfoam/openfoam11-paraview510
+    command: sh
+    args:
+      - "-c"
+      - |
+        cd flowOverCylinder && blockMesh > blockMesh.log 2>&1
+        echo "Mesh: $(grep cells blockMesh.log | tail -1)"
+    depends_on:
+      - case_setup
+    resources:
+      cpu: 2
+      memory: 4GB
+    timeout: "PT30M"
+
+  - id: simplefoam
+    type: docker
+    image: openfoam/openfoam11-paraview510
+    command: sh
+    args:
+      - "-c"
+      - |
+        cd flowOverCylinder && simpleFoam > simpleFoam.log 2>&1
+        echo "Solver complete: $(grep 'End' simpleFoam.log)"
+    depends_on:
+      - blockmesh
+    resources:
+      cpu: 4
+      memory: 8GB
+    timeout: "PT2H"
+    retry_policy:
+      max_attempts: 2
+      backoff: fixed
+      base_delay: 30
+
+  - id: forces
+    type: docker
+    image: openfoam/openfoam11-paraview510
+    command: sh
+    args:
+      - "-c"
+      - |
+        cd flowOverCylinder
+        # Compute forces using OpenFOAM's force function object
+        postProcess -func forces -latestTime > forces.log 2>&1
+        # Extract Cd and Cl
+        cd postProcessing/forces/
+        for d in */; do
+          cd $d
+          tail -1 force.dat | awk '{print "Cd: "$3, "Cl: "$4}'
+        done
+        echo "Post-processing complete"
+    depends_on:
+      - simplefoam
+    timeout: "PT30M"
+
+  - id: report
+    type: docker
+    image: openfoam/openfoam11-paraview510
+    command: python3
+    args:
+      - "-c"
+      - |
+        import json, os
+        forces_file = "flowOverCylinder/postProcessing/forces/0/force.dat"
+        if os.path.exists(forces_file):
+            with open(forces_file) as f:
+                lines = f.readlines()
+            # Parse last force entry
+            last = lines[-1].strip().split()
+            report = {
+                "time": float(last[0]),
+                "Cd": round(float(last[2]), 4),
+                "Cl": round(float(last[3]), 4),
+                "Re": 150,
+                "solver": "simpleFoam",
+                "mesh": "flowOverCylinder tutorial (adapted)"
+            }
+        else:
+            report = {"Re": 150, "status": "forces not computed"}
+        with open("REPORT.md", "w") as f:
+            f.write(f"# OpenFOAM Cylinder Flow at Re=150\n\n")
+            for k, v in report.items():
+                f.write(f"- **{k}**: {v}\n")
+        print(json.dumps(report, indent=2))
+    depends_on:
+      - forces
+    outputs:
+      - REPORT.md
