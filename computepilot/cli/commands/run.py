@@ -12,10 +12,10 @@ import typer
 from computepilot.cli.ui import console
 from computepilot.executors.local import LocalExecutor
 from computepilot.models.run import RunStatus
+from computepilot.models.workflow import Workflow
 from computepilot.runtime.engine import Engine
 from computepilot.runtime.state import StateStore
 from computepilot.workflow.schema import load_workflow
-from computepilot.models.workflow import Workflow
 from computepilot.workflow.validator import validate
 
 
