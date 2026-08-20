@@ -1,6 +1,25 @@
 name: CI
 on: [push, pull_request]
 jobs:
+  docker-test:
+    runs-on: ubuntu-latest
+    name: Docker executor integration
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Install project
+        run: |
+          pip install hatchling
+          pip install -e ".[dev]"
+
+      - name: Docker executor tests
+        run: pytest tests/integration/test_docker_executor.py -v --tb=short --no-cov
+        timeout-minutes: 10
+
   test:
     runs-on: ubuntu-latest
     strategy:
