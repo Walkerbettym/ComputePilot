@@ -1,4 +1,5 @@
 """Coverage gap fill: provider, probe, provenance, planner edge cases."""
+
 from __future__ import annotations
 
 from uuid import uuid4
@@ -81,16 +82,22 @@ class TestPlannerEdgeCases:
         assert wf.tasks[0].type == TaskType.DOCKER
 
     def test_parameters_passed(self):
-        wf = Planner().plan(Intent(
-            verb="run", target="test",
-            parameters={"epochs": 10, "lr": 0.01},
-        ))
+        wf = Planner().plan(
+            Intent(
+                verb="run",
+                target="test",
+                parameters={"epochs": 10, "lr": 0.01},
+            )
+        )
         assert wf.tasks[0].resources.cpu == 1  # default
 
     def test_custom_resources(self):
-        wf = Planner().plan(Intent(
-            verb="run", target="test",
-            resources={"cpu": 8, "memory": "16GB"},
-        ))
+        wf = Planner().plan(
+            Intent(
+                verb="run",
+                target="test",
+                resources={"cpu": 8, "memory": "16GB"},
+            )
+        )
         assert wf.tasks[0].resources.cpu == 8
         assert wf.tasks[0].resources.memory == "16GB"
