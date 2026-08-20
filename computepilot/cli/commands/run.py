@@ -15,6 +15,7 @@ from computepilot.models.run import RunStatus
 from computepilot.runtime.engine import Engine
 from computepilot.runtime.state import StateStore
 from computepilot.workflow.schema import load_workflow
+from computepilot.models.workflow import Workflow
 from computepilot.workflow.validator import validate
 
 
@@ -119,7 +120,7 @@ def _run_interactive(query: str, executor: str, max_concurrency: int) -> None:
     _execute_workflow(wf, executor, max_concurrency)
 
 
-def _execute_workflow(wf, executor: str, max_concurrency: int) -> None:
+def _execute_workflow(wf: Workflow, executor: str, max_concurrency: int) -> None:
     """Run a workflow with the given executor and concurrency."""
     state_dir = Path.home() / ".local" / "share" / "computepilot"
     state_dir.mkdir(parents=True, exist_ok=True)
