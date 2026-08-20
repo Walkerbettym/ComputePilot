@@ -1,4 +1,4 @@
-"""computepilot init — scaffold a new workflow."""
+"""cpilot init — scaffold a new workflow."""
 
 from __future__ import annotations
 

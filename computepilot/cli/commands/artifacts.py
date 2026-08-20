@@ -1,4 +1,4 @@
-"""computepilot artifacts — list artifacts for a given run."""
+"""cpilot artifacts — list artifacts for a given run."""
 
 from __future__ import annotations
 

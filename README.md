@@ -39,7 +39,7 @@ source .venv/bin/activate
 pip install -e ".[dev]"
 
 # 3. 验证
-computepilot --help
+cpilot --help
 ```
 
 ---
@@ -49,7 +49,7 @@ computepilot --help
 ### 0. 初始化一个工作流项目
 
 ```bash
-computepilot init my_experiment
+cpilot init my_experiment
 cd my_experiment
 ```
 
@@ -67,23 +67,23 @@ tasks:
 ### 1. 校验
 
 ```bash
-computepilot validate workflow.yaml
+cpilot validate workflow.yaml
 # ✓ 校验通过
 ```
 
 ### 2. 运行
 
 ```bash
-computepilot run workflow.yaml
+cpilot run workflow.yaml
 # 确认执行？[Y/n]
 ```
 
 ### 3. 查看状态与日志
 
 ```bash
-computepilot status            # 查看所有运行
-computepilot status <run-id>   # 查看某个运行详情
-computepilot logs <run-id>     # 查看任务事件日志
+cpilot status            # 查看所有运行
+cpilot status <run-id>   # 查看某个运行详情
+cpilot logs <run-id>     # 查看任务事件日志
 ```
 
 ### 4. 从自然语言生成工作流（Agent）
@@ -93,7 +93,7 @@ computepilot logs <run-id>     # 查看任务事件日志
 export SCIFLOW_LLM_API_KEY="sk-..."
 export SCIFLOW_LLM_MODEL="gpt-4o-mini"
 
-computepilot plan "Run a parameter sweep from 1 to 100 with 10 points, use 8 CPUs"
+cpilot plan "Run a parameter sweep from 1 to 100 with 10 points, use 8 CPUs"
 # → 生成 workflow.yaml + 成本估算
 ```
 
@@ -102,15 +102,15 @@ computepilot plan "Run a parameter sweep from 1 to 100 with 10 points, use 8 CPU
 如果运行中途被杀，可以恢复：
 
 ```bash
-computepilot resume <run-id>
+cpilot resume <run-id>
 # 从最后一个成功任务继续，不丢已完成、不重复执行
 ```
 
 ### 6. 产物与溯源报告
 
 ```bash
-computepilot artifacts <run-id>   # 列出制品（路径/sha256/大小）
-computepilot report <run-id>      # 生成 report.md + manifest.json（可复现）
+cpilot artifacts <run-id>   # 列出制品（路径/sha256/大小）
+cpilot report <run-id>      # 生成 report.md + manifest.json（可复现）
 ```
 
 ---

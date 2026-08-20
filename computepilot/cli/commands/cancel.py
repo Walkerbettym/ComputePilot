@@ -1,4 +1,4 @@
-"""computepilot cancel — cancel a running run."""
+"""cpilot cancel — cancel a running run."""
 
 from __future__ import annotations
 

@@ -1004,35 +1004,35 @@ Continue?
 第一版：
 
 ```bash
-computepilot init
+cpilot init
 ```
 
 ```bash
-computepilot plan "run parameter sweep..."
+cpilot plan "run parameter sweep..."
 ```
 
 ```bash
-computepilot validate workflow.yaml
+cpilot validate workflow.yaml
 ```
 
 ```bash
-computepilot run workflow.yaml
+cpilot run workflow.yaml
 ```
 
 ```bash
-computepilot status
+cpilot status
 ```
 
 ```bash
-computepilot logs task-42
+cpilot logs task-42
 ```
 
 ```bash
-computepilot resume run-001
+cpilot resume run-001
 ```
 
 ```bash
-computepilot artifacts run-001
+cpilot artifacts run-001
 ```
 
 CLI 足够了。
@@ -1200,7 +1200,7 @@ CLI
 做到：
 
 ```bash
-computepilot run workflow.yaml
+cpilot run workflow.yaml
 ```
 
 可以真的运行。
@@ -1223,7 +1223,7 @@ Run metadata
 做到：
 
 ```bash
-computepilot resume run-001
+cpilot resume run-001
 ```
 
 ---
@@ -1260,7 +1260,7 @@ Validator
 做到：
 
 ```bash
-computepilot plan "run..."
+cpilot plan "run..."
 ```
 
 自动生成：
@@ -1394,7 +1394,7 @@ job 4 running
 重新启动：
 
 ```text
-computepilot resume
+cpilot resume
 ```
 
 继续执行。
@@ -1660,7 +1660,7 @@ Artifacts + Provenance
 我建议你给自己一个非常明确的终点：
 
 ```text
-$ computepilot plan \
+$ cpilot plan \
   "Run my simulation with x from 1 to 100,
    use 16 CPUs, analyze the results and
    generate a plot."
@@ -1687,7 +1687,7 @@ Approve? [y/N]
 然后：
 
 ```text
-$ computepilot run workflow.yaml
+$ cpilot run workflow.yaml
 ```
 
 运行：

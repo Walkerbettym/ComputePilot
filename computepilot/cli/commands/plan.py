@@ -1,4 +1,4 @@
-"""computepilot plan — generate a workflow from a natural language description."""
+"""cpilot plan — generate a workflow from a natural language description."""
 
 from __future__ import annotations
 

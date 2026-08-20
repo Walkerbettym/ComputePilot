@@ -1,4 +1,4 @@
-"""computepilot validate — validate a workflow YAML."""
+"""cpilot validate — validate a workflow YAML."""
 
 from __future__ import annotations
 

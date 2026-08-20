@@ -1,4 +1,4 @@
-"""computepilot skill — manage registered skills."""
+"""cpilot skill — manage registered skills."""
 
 from __future__ import annotations
 

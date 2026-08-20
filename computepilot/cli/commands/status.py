@@ -1,4 +1,4 @@
-"""computepilot status — show run status."""
+"""cpilot status — show run status."""
 
 from __future__ import annotations
 

@@ -94,7 +94,7 @@ ArtifactStore（注册/查询/校验和）、ProvenanceBuilder（manifest.json �
 ## CLI 命令架构
 
 ```
-computepilot
+cpilot
 ├── init       创建项目骨架
 ├── validate   校验 workflow（24 条规则）
 ├── run        执行（Local/Docker/Slurm）

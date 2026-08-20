@@ -1,4 +1,4 @@
-"""computepilot run — execute a workflow (YAML or interactive)."""
+"""cpilot run — execute a workflow (YAML or interactive)."""
 
 from __future__ import annotations
 

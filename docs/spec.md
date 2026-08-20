@@ -269,15 +269,15 @@ cli → agent → workflow → runtime → executors → artifacts
 | FR-06 | P0 | Scheduler:按依赖就绪调度 + 最大并发控制 | runtime/scheduler |
 | FR-07 | P0 | 状态持久化:SQLite(§12.1)+ run 目录(§12.2) | runtime/state |
 | FR-08 | P0 | `cpilot status` 实时查看 DAG 与任务状态 | cli/runtime |
-| FR-09 | P0 | `computepilot logs <run-id> <task-id> [--tail N]` | cli/runtime |
-| FR-10 | P1 | 每任务完成后写 checkpoint;`computepilot resume <run-id>` 从最后一个成功任务继续 | runtime/checkpoint |
+| FR-09 | P0 | `cpilot logs <run-id> <task-id> [--tail N]` | cli/runtime |
+| FR-10 | P1 | 每任务完成后写 checkpoint;`cpilot resume <run-id>` 从最后一个成功任务继续 | runtime/checkpoint |
 | FR-11 | P1 | Artifact 注册:路径、类型、SHA256、生产者、元数据 | artifacts/store |
 | FR-12 | P1 | Provenance: manifest.json 生成(§14.2) | artifacts/provenance |
-| FR-13 | P1 | `computepilot report <run-id>` 生成 report.md(由 manifest 渲染) | cli/artifacts |
+| FR-13 | P1 | `cpilot report <run-id>` 生成 report.md(由 manifest 渲染) | cli/artifacts |
 | FR-14 | P1 | DockerExecutor:镜像固定( digest 或 tag+pull)、容器内运行、资源映射 | executors/docker |
 | FR-15 | P1 | SlurmExecutor:sbatch 提交、squeue 监控、scancel、分区/节点/墙钟映射 | executors/slurm |
 | FR-16 | P1 | 重试策略:max_attempts、backoff、可重试退出码/信号(§13.3) | runtime/retry |
-| FR-17 | P2 | `computepilot plan "<自然语言>"` → 生成 workflow.yaml draft + 成本估算 + 审批 | agent |
+| FR-17 | P2 | `cpilot plan "<自然语言>"` → 生成 workflow.yaml draft + 成本估算 + 审批 | agent |
 | FR-18 | P2 | Intent 结构化提取:verb、target、parameters、resources、constraints | agent/intent |
 | FR-19 | P2 | Skill 注册 / 检索(§10.6.3):关键词 + 向量检索,top-k 注入 | agent/selector |
 | FR-20 | P2 | 失败诊断:规则分类器(OOM/超时/缺文件/语法错误)+ LLM 深度诊断 → 修复建议 | agent/diagnosis |
@@ -903,22 +903,22 @@ error_handling:
 Typer 实现。命令参考:
 
 ```text
-computepilot init [dir]                          # FR-01 骨架:workflow.yaml.example + config.yaml + runs/
-computepilot plan "<NL 描述>" [--skills ...]      # FR-17 → 输出 draft + 成本估算 + 审批
-computepilot validate workflow.yaml [--json]     # FR-04
-computepilot run workflow.yaml
+cpilot init [dir]                          # FR-01 骨架:workflow.yaml.example + config.yaml + runs/
+cpilot plan "<NL 描述>" [--skills ...]      # FR-17 → 输出 draft + 成本估算 + 审批
+cpilot validate workflow.yaml [--json]     # FR-04
+cpilot run workflow.yaml
         [--executor local|docker|slurm]     # 默认 local
         [--max-concurrency N]               # 默认 4
         [--config config.yaml]
         [--approve]                         # 跳过审批(危险,记审计)
         [--no-cache]
-computepilot status [run-id]                     # FR-08;无 run-id 显示最近运行
-computepilot logs <run-id> <task-id> [--tail N]  # FR-09
-computepilot resume <run-id> [--executor ...]    # FR-10
-computepilot cancel <run-id>
-computepilot artifacts <run-id> [--type ...]     # FR-11 列表(路径/类型/哈希)
-computepilot report <run-id>                     # FR-13
-computepilot skill list | add <path>             # FR-19
+cpilot status [run-id]                     # FR-08;无 run-id 显示最近运行
+cpilot logs <run-id> <task-id> [--tail N]  # FR-09
+cpilot resume <run-id> [--executor ...]    # FR-10
+cpilot cancel <run-id>
+cpilot artifacts <run-id> [--type ...]     # FR-11 列表(路径/类型/哈希)
+cpilot report <run-id>                     # FR-13
+cpilot skill list | add <path>             # FR-19
 ```
 
 输出风格: `rich` 渲染;状态行含 DAG 缩进与任务状态图标(§22 Web UI 的 CLI 版)。
@@ -1100,8 +1100,8 @@ runs/experiment-2026-08-18-001/
 ### 12.3 可复现性验证命令(DevOps 用)
 
 ```text
-computepilot report <run-id>          # 渲染 manifest → report.md
-computepilot verify <run-id>          # 重新校验所有 artifact sha256 是否仍一致
+cpilot report <run-id>          # 渲染 manifest → report.md
+cpilot verify <run-id>          # 重新校验所有 artifact sha256 是否仍一致
 ```
 
 ---
@@ -1327,11 +1327,11 @@ computepilot/
 | Phase | 周期 | 内容 | 出口条件(Exit Criteria) |
 | --- | --- | --- | --- |
 | Phase 0 — Design | 1 周 | 架构、DSL、接口、仓库骨架 | §7 DSL 定稿;`cpilot init` 可用;CI 绿 |
-| Phase 1 — Workflow Engine | 2–3 周 | DAG/Scheduler/Executor/State/CLI | `computepilot run examples/hello_world` 真实跑通 |
+| Phase 1 — Workflow Engine | 2–3 周 | DAG/Scheduler/Executor/State/CLI | `cpilot run examples/hello_world` 真实跑通 |
 | Phase 2 — Reproducibility | 1–2 周 | Checkpoint/Artifact/Provenance/manifest | `cpilot resume` 可恢复;manifest 完整 |
 | Phase 3 — Docker / Slurm | 2–3 周 | 三个 Executor 插件 | 同一 workflow 三端可跑;FakeSlurm 测试绿 |
 | **Release v0.1-alpha** | – | 以上合入 | **Demo 1–4 全过**(含本地版) |
-| Phase 4 — Agent | 2–3 周 | Intent/Planner/Generator/Validator/审批 | `computepilot plan "..."` 生成可运行 workflow |
+| Phase 4 — Agent | 2–3 周 | Intent/Planner/Generator/Validator/审批 | `cpilot plan "..."` 生成可运行 workflow |
 | Phase 5 — Scientific Skills | 2–3 周 | python/slurm 深化 + 领域 skill 框架 | skill registry + 检索可用 |
 | Phase 6 — Recovery Agent | 3–4 周 | 诊断/修复/重试/审批闭环 | Demo 2 全自动(审批后)通过 |
 | Phase 7 — UI(第二阶段) | 之后 | Web Dashboard / 图可视化 / 日志流 | 另行立项 |
@@ -1342,13 +1342,13 @@ computepilot/
 | --- | --- | --- | --- |
 | 1 | Workflow DSL + 架构 | schema.py、dag.py 骨架、docs/architecture.md、`cpilot init` | workflow.yaml ↔ Workflow 模型 roundtrip 测试通过;环检测单测通过 |
 | 2 | DAG + Task Model | dag.py 完整、validator 结构/资源/I/O 规则 | E-001~E-009、E-100~E-106、E-200~E-203 全错误码测试通过 |
-| 3 | Local Executor | executors/local.py、engine 单任务路径 | `computepilot run examples/hello_world` 端到端成功,产物生成 |
+| 3 | Local Executor | executors/local.py、engine 单任务路径 | `cpilot run examples/hello_world` 端到端成功,产物生成 |
 | 4 | Scheduler + 并行 | scheduler.py、max-concurrency、rich status | parameter_sweep(10 点)并行运行,status 正确显示,DAG 就绪顺序正确 |
 | 5 | State + Checkpoint | state.py、checkpoint.py、`resume` | **Demo 3 通过**:kill 进程后 resume 不丢不重 |
 | 6 | Artifact + Provenance | store.py、provenance.py、manifest、`report` | **Demo 4 通过**:两版代码 manifest 可区分;artifact sha256 正确 |
 | 7 | Docker Executor | docker.py | 同一 workflow 在固定镜像容器内跑通;digest 入 manifest |
 | 8 | Slurm Executor | slurm.py、fake_slurm.py | FakeSlurm 全绿;真实集群冒烟脚本可运行(有集群时) |
-| 9 | Agent Intent + Planner | provider.py、intent.py、planner.py | `computepilot plan "run parameter sweep from 1 to 100 with 50 points"` 输出有效 Intent |
+| 9 | Agent Intent + Planner | provider.py、intent.py、planner.py | `cpilot plan "run parameter sweep from 1 to 100 with 50 points"` 输出有效 Intent |
 | 10 | Workflow 生成 + 校验 | generator.py + agent 侧 validator 闭环 | Agent 生成的 workflow 首次通过 validator ≥ 90%;生成失败自动修复 ≤ 3 轮 |
 | 11 | 失败诊断 + 重试 | diagnosis.py、retry 闭环、审批 | **Demo 2 通过**:OOM → 自动升内存 → 审批 → 重试成功 |
 | 12 | Demo + 文档 + v0.1 | e2e 套件、README、LICENSE、CI 全绿 | **Demo 1–4 自动化全过**;发布 v0.1;§18 门禁 checklist 全勾 |
@@ -1384,7 +1384,7 @@ job 17 → OOM
 **Demo 3 — 崩溃恢复**
 ```text
 job 1 ✓ job 2 ✓ job 3 ✓ job 4 running → kill engine
-computepilot resume → 继续执行
+cpilot resume → 继续执行
 断言: 1–3 状态保持 SUCCEEDED 且未被重跑;4 重跑或继续;最终全部完成
 ```
 
@@ -1412,7 +1412,7 @@ git commit A → run A;git commit B → run B
 这是 v0.1 的 North Star Demo——**如果你能把这一条完整链路做出来,这个项目就已经非常像样了。**
 
 ```text
-$ computepilot plan \
+$ cpilot plan \
   "Run my simulation with x from 1 to 100,
    use 16 CPUs, analyze the results and
    generate a plot."
@@ -1433,7 +1433,7 @@ Approve? [y/N]
 ```
 
 ```text
-$ computepilot run workflow.yaml
+$ cpilot run workflow.yaml
 
 generate_parameters       ✓
 simulation 01             ✓

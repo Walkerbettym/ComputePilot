@@ -1,4 +1,4 @@
-"""computepilot logs — show task logs for a run."""
+"""cpilot logs — show task logs for a run."""
 
 from __future__ import annotations
 

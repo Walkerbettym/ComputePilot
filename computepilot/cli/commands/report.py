@@ -1,4 +1,4 @@
-"""computepilot report — generate a provenance report for a given run."""
+"""cpilot report — generate a provenance report for a given run."""
 
 from __future__ import annotations
 

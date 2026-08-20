@@ -1,4 +1,4 @@
-"""computepilot resume — resume a previously-started run from its last checkpoint."""
+"""cpilot resume — resume a previously-started run from its last checkpoint."""
 
 from __future__ import annotations
 
