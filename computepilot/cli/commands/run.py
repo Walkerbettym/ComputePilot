@@ -6,6 +6,7 @@ import asyncio
 import uuid
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import Any
 
 import typer
 
@@ -31,8 +32,15 @@ def run(
     interactive: bool = typer.Option(
         False, "--interactive", "-i", help="Interactive mode: natural language → plan → execute"
     ),
+    from_session: str | None = typer.Option(
+        None, "--from-session", "-s", help="Execute the workflow from a saved session ID"
+    ),
 ) -> None:
     """Execute a workflow from YAML or via interactive conversation."""
+    if from_session:
+        _run_from_session(from_session, executor, max_concurrency)
+        return
+
     if interactive:
         _run_interactive(input or "run a workflow", executor, max_concurrency)
         return
@@ -62,18 +70,71 @@ def run(
     _execute_workflow(wf, executor, max_concurrency)
 
 
-def _run_interactive(query: str, executor: str, max_concurrency: int) -> None:
-    """Interactive Conductor session → approval → execution."""
+def _sessions_dir() -> Path:
+    d = Path.home() / ".local" / "share" / "computepilot" / "sessions"
+    d.mkdir(parents=True, exist_ok=True)
+    return d
+
+
+def _build_conductor() -> object:
     from computepilot.agent.conductor import Conductor
     from computepilot.agent.provider import OpenAIProvider
     from computepilot.skills.base import SkillRegistry
 
+    registry = SkillRegistry()
+    registry.register_builtins()
+    return Conductor(provider=OpenAIProvider(), registry=registry)
+
+
+def _plan_and_execute(session: Any, executor: str, max_concurrency: int) -> None:
+    """Plan a workflow from the session intent, validate, and execute."""
+    from computepilot.agent.planner import Planner
+
+    assert session.current_intent is not None
+    wf = Planner().plan(session.current_intent)
+    report = validate(wf)
+    if not report.passed:
+        from computepilot.cli.ui import print_validation_report
+
+        console.print("[red]✗ Generated workflow validation failed[/red]")
+        print_validation_report(report)
+        raise typer.Exit(2)
+
+    console.print(f"[green]✓ Workflow '{wf.name}' generated with {len(wf.tasks)} tasks[/green]")
+    _execute_workflow(wf, executor, max_concurrency)
+
+
+def _run_from_session(session_id: str, executor: str, max_concurrency: int) -> None:
+    """Load a saved Conductor session and execute its planned workflow."""
+    from computepilot.agent.conductor import Conductor
+
+    console.print(f"[bold]🤖 Resuming session[/bold] {session_id}")
+    console.print()
+
+    conductor = _build_conductor()
+    assert isinstance(conductor, Conductor)
+    try:
+        session = conductor.load_session(session_id, _sessions_dir())
+    except FileNotFoundError:
+        console.print(f"[red]✗ Session not found: {session_id}[/red]")
+        raise typer.Exit(1) from None
+
+    if session.current_intent is None:
+        console.print("[red]✗ Session has no workflow plan yet[/red]")
+        raise typer.Exit(1)
+
+    _plan_and_execute(session, executor, max_concurrency)
+
+
+def _run_interactive(query: str, executor: str, max_concurrency: int) -> None:
+    """Interactive Conductor session → approval → execution."""
+    from computepilot.agent.conductor import Conductor
+
     console.print("[bold]🤖 Interactive mode[/bold] (natural language → workflow → execute)")
     console.print()
 
-    registry = SkillRegistry()
-    registry.register_builtins()
-    conductor = Conductor(provider=OpenAIProvider(), registry=registry)
+    conductor = _build_conductor()
+    assert isinstance(conductor, Conductor)
 
     sid = conductor.new_session()
     user_input = query
@@ -105,19 +166,10 @@ def _run_interactive(query: str, executor: str, max_concurrency: int) -> None:
         console.print("[red]✗ No workflow plan generated[/red]")
         raise typer.Exit(1)
 
-    from computepilot.agent.planner import Planner
+    saved = conductor.save_session(sid, _sessions_dir())
+    console.print(f"[dim]Session saved: {saved} (resume with --from-session {sid})[/dim]")
 
-    wf = Planner().plan(session.current_intent)
-    report = validate(wf)
-    if not report.passed:
-        from computepilot.cli.ui import print_validation_report
-
-        console.print("[red]✗ Generated workflow validation failed[/red]")
-        print_validation_report(report)
-        raise typer.Exit(2)
-
-    console.print(f"[green]✓ Workflow '{wf.name}' generated with {len(wf.tasks)} tasks[/green]")
-    _execute_workflow(wf, executor, max_concurrency)
+    _plan_and_execute(session, executor, max_concurrency)
 
 
 def _execute_workflow(wf: Workflow, executor: str, max_concurrency: int) -> None:

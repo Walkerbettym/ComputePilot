@@ -25,9 +25,11 @@ Typical session::
 
 from __future__ import annotations
 
+import json
 import uuid
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
+from pathlib import Path
 from typing import Any
 
 from computepilot.agent.cost import CostEstimator
@@ -122,6 +124,60 @@ class Conductor:
     def get_session(self, session_id: str) -> ConductorSession | None:
         """Return a session by ID, or None."""
         return self._sessions.get(session_id)
+
+    # -- Session persistence ----------------------------------------------------
+
+    def save_session(self, session_id: str, directory: str | Path) -> Path:
+        """Persist a session to ``<directory>/<session_id>.json`` and return the path."""
+        session = self._sessions.get(session_id)
+        if session is None:
+            raise KeyError(f"Session {session_id} not found")
+
+        data = {
+            "id": session.id,
+            "history": session.history,
+            "current_intent": (
+                session.current_intent.model_dump(mode="json") if session.current_intent else None
+            ),
+            "selected_skill": session.selected_skill.name if session.selected_skill else None,
+            "phase": session.phase,
+            "created_at": session.created_at.isoformat(),
+        }
+        d = Path(directory)
+        d.mkdir(parents=True, exist_ok=True)
+        path = d / f"{session.id}.json"
+        path.write_text(json.dumps(data, indent=2), encoding="utf-8")
+        return path
+
+    def load_session(self, session_id: str, directory: str | Path) -> ConductorSession:
+        """Load a persisted session from disk into memory and return it."""
+        path = Path(directory) / f"{session_id}.json"
+        if not path.exists():
+            raise FileNotFoundError(f"Session file not found: {path}")
+
+        data = json.loads(path.read_text(encoding="utf-8"))
+        skill_name = data.get("selected_skill")
+        session = ConductorSession(
+            id=data["id"],
+            history=data.get("history", []),
+            current_intent=(
+                Intent.model_validate(data["current_intent"])
+                if data.get("current_intent")
+                else None
+            ),
+            selected_skill=self._registry.get(skill_name) if skill_name else None,
+            phase=data.get("phase", "routing"),
+            created_at=datetime.fromisoformat(data["created_at"]),
+        )
+        self._sessions[session.id] = session
+        return session
+
+    def list_sessions(self, directory: str | Path) -> list[str]:
+        """List persisted session IDs found in a directory."""
+        d = Path(directory)
+        if not d.exists():
+            return []
+        return sorted(p.stem for p in d.glob("*.json"))
 
     # -- Single turn (synchronous, for testing / simple use) ------------------
 

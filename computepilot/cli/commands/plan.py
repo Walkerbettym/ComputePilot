@@ -33,14 +33,23 @@ def plan(
         help="Multi-turn conversation with clarification (requires Conductor)",
     ),
 ) -> None:
-    if interactive:
-        from computepilot.agent.conductor import Conductor
-        from computepilot.agent.provider import OpenAIProvider
-        from computepilot.skills.base import SkillRegistry
+    """Generate a workflow from a natural language description."""
+    from computepilot.agent.conductor import Conductor
+    from computepilot.agent.provider import OpenAIProvider
+    from computepilot.skills.base import SkillRegistry
 
+    provider_type = os.environ.get("COMPUTEPILOT_LLM_PROVIDER", "openai").lower()
+
+    if provider_type != "openai":
+        console.print(f"[red]Unsupported provider: {provider_type}[/red]")
+        raise typer.Exit(1)
+
+    provider = OpenAIProvider(model=model)
+
+    if interactive:
         registry = SkillRegistry()
         registry.register_builtins()
-        cond = Conductor(provider=OpenAIProvider(model=model), registry=registry)
+        cond = Conductor(provider=provider, registry=registry)
         sid = cond.new_session()
         user_input = description
         rounds = 0
@@ -59,14 +68,7 @@ def plan(
                 break
             rounds += 1
         return
-    """Generate a workflow from a natural language description."""
-    provider_type = os.environ.get("COMPUTEPILOT_LLM_PROVIDER", "openai").lower()
 
-    if provider_type != "openai":
-        console.print(f"[red]Unsupported provider: {provider_type}[/red]")
-        raise typer.Exit(1)
-
-    provider = OpenAIProvider(model=model)
     generator = WorkflowGenerator(provider)
 
     with console.status("[cyan]Extracting intent and generating workflow...[/cyan]"):

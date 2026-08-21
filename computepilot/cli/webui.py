@@ -64,7 +64,7 @@ def _card(n: int | str, label: str, color: str = "") -> str:
 
 
 @app.get("/", response_class=HTMLResponse)
-async def index():
+async def index() -> HTMLResponse:
     if not STATE_DB.exists():
         return HTMLResponse(content=_pg("Dashboard", '<p class="empty">No runs yet.</p>'))
 
@@ -112,7 +112,7 @@ async def index():
 
 
 @app.get("/run/{run_id}", response_class=HTMLResponse)
-async def run_detail(run_id: str):
+async def run_detail(run_id: str) -> HTMLResponse:
     if not STATE_DB.exists():
         return HTMLResponse(content=_pg("Error", '<p class="empty">No database.</p>'))
     conn = _db()
@@ -158,7 +158,7 @@ async def run_detail(run_id: str):
     return HTMLResponse(content=body)
 
 
-def main():
+def main() -> None:
     import uvicorn
 
     print("🌐 ComputePilot Dashboard → http://0.0.0.0:8765")

@@ -59,9 +59,7 @@ class WorkspaceManager:
         """All registered workspaces."""
         return list(self._workspaces.values())
 
-    def create(
-        self, name: str, path: str | None = None, description: str = ""
-    ) -> Workspace:
+    def create(self, name: str, path: str | None = None, description: str = "") -> Workspace:
         """Create a new workspace."""
         if name in self._workspaces:
             msg = f"Workspace '{name}' already exists"

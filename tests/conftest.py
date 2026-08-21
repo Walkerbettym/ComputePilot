@@ -2,6 +2,10 @@
 
 from __future__ import annotations
 
+import os
+
+os.environ.setdefault("COLUMNS", "300")
+
 from pathlib import Path
 
 import pytest

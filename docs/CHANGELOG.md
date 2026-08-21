@@ -1,5 +1,50 @@
 # Changelog
 
+## v0.4.0 (2026-08-21)
+
+从"能跑真实用例"到"生产可用" — 稳定性、CLI 全链路集成、监控生态。
+
+### 新功能
+
+- **`cpilot run --interactive`** — 一次完成：自然语言 → Conductor 对话 → 批准 → 执行
+- **`cpilot run --from-session <id>`** — 会话持久化（JSON），从上次对话继续规划执行；交互结束自动保存并提示恢复命令
+- **Conductor 会话持久化 API** — `save_session` / `load_session` / `list_sessions`
+- **`cpilot status --live`** — ExecutionSentinel 实时进度条 + OOM/stalled 异常告警
+- **WorkspaceManager** — 多工作区创建/列表/切换/删除
+- **Web Dashboard** — FastAPI UI：运行统计卡片、成功率、任务进度条、自动刷新
+
+### 修复
+
+- `cpilot plan` 非交互路径 UnboundLocalError（局部 import 作用域问题）— 该路径此前完全不可用
+- webui.py mypy strict 注解缺失
+
+### 开发质量
+
+- 覆盖率 67% → **87%**（目标 ≥80% 达成）
+- 新增 74 个 CLI 单元测试（绕开 typer CliRunner 兼容性，直接调用命令函数）
+- mypy --strict 66 文件零错误；ruff 零错误
+- Docker CI job — docker executor 集成测试在 ubuntu-latest 运行
+
+## v0.3.0 (2026-08-20)
+
+从"能跑"到"真正能用" — K8s 执行器、CLI 交互模式、真实科学用例。
+
+- **Kubernetes 执行器** — `executors/kubernetes.py` + FakeK8s（CI 用），namespace/pod/PV
+- **`plan --interactive`** — Conductor 多轮对话澄清模式
+- **1000 Genomes demo** — 论文对齐的群体遗传学 e2e 工作流
+- CLI 命令测试（14 个）+ Conductor/Sentinel 集成测试
+
+## v0.2.0 (2026-08-19)
+
+论文"管道编排层"对齐 — 从科研问题到可执行 DAG 的智能翻译。
+
+- **技能知识层 v2** — vocabulary_mappings（26 群体/24 染色体/5 分析类型）、parameter_constraints、optimization_strategies
+- **VocabularyResolver** — 自然语言 token → 领域规范码
+- **Conductor** — 多轮对话编排：路由 → 澄清 → 规划 → 审批门控
+- **EnvironmentProbe + 延迟 DAG 生成** — 先探测环境再定最终 DAG
+- **ExecutionSentinel** — 进度监控 + stalled/OOM 异常检测
+- **population_genetics skill** — 1000 Genomes 领域知识编码
+
 ## v0.1.0 (2026-08-19)
 
 ComputePilot 首个正式发布版本。
