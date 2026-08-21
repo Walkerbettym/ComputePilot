@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import contextlib
 import json
 import sqlite3
 from datetime import datetime
@@ -76,6 +77,9 @@ class StateStore:
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
         self._conn = sqlite3.connect(str(self.db_path))
         self._conn.row_factory = sqlite3.Row
+        # WAL improves concurrent read/write (CLI + Dashboard)
+        with contextlib.suppress(sqlite3.DatabaseError):
+            self._conn.execute("PRAGMA journal_mode=WAL")
         self._conn.executescript(SCHEMA)
 
     def close(self) -> None:

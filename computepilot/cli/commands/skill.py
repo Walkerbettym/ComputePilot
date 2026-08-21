@@ -71,9 +71,56 @@ def show_skill(name: str) -> None:
     console.print(_yaml.dump(skill.model_dump(mode="json"), sort_keys=False), markup=False)
 
 
+SKILL_TEMPLATE = """\
+name: {name}
+version: 0.1.0
+description: "TODO: describe the domain capability"
+capabilities: []
+constraints:
+  required_commands: []
+resources_defaults:
+  cpu: 1
+  memory: 2GB
+  gpu: 0
+error_handling: {{}}
+# Domain vocabulary: natural-language token → canonical code, e.g.
+# vocabulary_mappings:
+#   population:
+#     european: EUR
+vocabulary_mappings: {{}}
+# Parameter rules, e.g.
+# parameter_constraints:
+#   chromosomes:
+#     allowed: ["chr1", "chr22"]
+#     required: false
+parameter_constraints: {{}}
+optimization_strategies: []
+"""
+
+
+def new_skill(name: str) -> None:
+    """Scaffold a new skill YAML file in the current directory."""
+    import re
+
+    if not re.fullmatch(r"[a-z][a-z0-9_]*", name):
+        console.print(
+            "[red]✗ Skill name must be lowercase letters/digits/underscores "
+            "starting with a letter[/red]"
+        )
+        raise typer.Exit(2)
+    path = Path(f"{name}_skill.yaml")
+    if path.exists():
+        console.print(f"[red]❌ {path} already exists[/red]")
+        raise typer.Exit(1)
+    path.write_text(SKILL_TEMPLATE.format(name=name))
+    console.print(f"[green]✓[/green] Created [bold]{path}[/bold]")
+    console.print("[dim]Load it with: cpilot skill add " + str(path) + "[/dim]")
+
+
 skill_app = typer.Typer(help="Manage registered skills")
 
 
 skill_app.command(name="list")(list_skills)
 skill_app.command(name="add")(add_skill)
 skill_app.command(name="show")(show_skill)
+skill_app.command(name="new")(new_skill)

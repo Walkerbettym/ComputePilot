@@ -19,6 +19,7 @@ from computepilot.models.run import RunStatus
 from computepilot.models.workflow import Workflow
 from computepilot.runtime.engine import Engine
 from computepilot.runtime.state import StateStore
+from computepilot.workflow.params import MissingParameterError, parse_set_args
 from computepilot.workflow.schema import load_workflow
 from computepilot.workflow.validator import validate
 
@@ -38,6 +39,9 @@ def run(
     from_session: str | None = typer.Option(
         None, "--from-session", "-s", help="Execute the workflow from a saved session ID"
     ),
+    set_param: list[str] | None = typer.Option(
+        None, "--set", help="Set workflow parameter, e.g. --set epochs=50 (repeatable)"
+    ),
 ) -> None:
     """Execute a workflow from YAML or via interactive conversation."""
     if from_session:
@@ -48,12 +52,23 @@ def run(
         _run_interactive(input or "run a workflow", executor, max_concurrency)
         return
 
+    try:
+        params = parse_set_args(set_param)
+    except ValueError as exc:
+        console.print(f"[red]❌ {exc}[/red]")
+        raise typer.Exit(2) from exc
+
     path = Path(input)
     if not path.exists():
         console.print(f"[red]❌ workflow not found: {path}[/red]")
         raise typer.Exit(2)
 
-    wf = load_workflow(path)
+    try:
+        wf = load_workflow(path, params)
+    except MissingParameterError as exc:
+        console.print(f"[red]❌ {exc}[/red]")
+        console.print("[dim]Provide values with --set key=value[/dim]")
+        raise typer.Exit(2) from exc
     report = validate(wf)
     if not report.passed:
         console.print("[red]❌ Workflow validation failed:[/red]")

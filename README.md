@@ -144,7 +144,7 @@ cpilot report <run-id>      # 生成 report.md + manifest.json（可复现）
 | `cpilot init` | 初始化工作流项目 |
 | `cpilot validate` | 校验 workflow.yaml（24 条规则） |
 | `cpilot dag` | 可视化任务依赖图（ascii/mermaid/json） |
-| `cpilot run` | 执行工作流（Local/Docker/Slurm/K8s） |
+| `cpilot run` | 执行工作流（Local/Docker/Slurm/K8s；`--set k=v` 参数化） |
 | `cpilot plan` | 从自然语言生成工作流 |
 | `cpilot status` | 查看运行状态 |
 | `cpilot logs` | 查看任务事件日志（`--follow` 实时跟踪） |
@@ -154,6 +154,7 @@ cpilot report <run-id>      # 生成 report.md + manifest.json（可复现）
 | `cpilot report` | 生成溯源报告 |
 | `cpilot skill` | 管理技能注册表 |
 | `cpilot sessions` | 查看/清理已保存的交互会话 |
+| `cpilot runs` | 运行历史管理（list/clean） |
 
 ---
 

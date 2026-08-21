@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "computepilot"
-version = "0.7.0"
+version = "0.8.0"
 description = "Agentic workflow runtime for reproducible scientific computing"
 requires-python = ">=3.11"
 dependencies = [
@@ -38,6 +38,9 @@ target-version = "py311"
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "N", "W", "UP", "B", "SIM"]
+
+[tool.ruff.lint.flake8-bugbear]
+extend-immutable-calls = ["typer.Option", "typer.Argument"]
 
 [tool.mypy]
 strict = true

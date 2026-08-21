@@ -183,7 +183,34 @@ async def run_detail(run_id: str) -> HTMLResponse:
             sc = {"succeeded": "s-ok", "failed": "s-fail"}.get(t["status"], "")
             body += f'<tr><td>{t["task_id"]}</td><td class="{sc}">{t["status"]}</td><td>{t["exit_code"] or "-"}</td><td style="white-space:normal;max-width:300px;word-break:break-all">{t["error"] or "-"}</td></tr>'
         body += "</table>"
-    body += '<div class="nav"><a href="/">← Back</a></div>'
+    body += (
+        f'<div class="nav"><a href="/run/{run_id}/live">⚡ Live events</a> · '
+        '<a href="/">← Back</a></div>'
+    )
+    return HTMLResponse(content=body)
+
+
+@app.get("/run/{run_id}/live", response_class=HTMLResponse)
+async def run_live(run_id: str) -> HTMLResponse:
+    """Auto-polling live event stream for a run (uses the cursor API)."""
+    body = _pg(f"Live {run_id[:20]}", "", auto_refresh=False)
+    body += f"<h2>Live events — <code>{run_id[:28]}</code></h2>"
+    body += (
+        '<div id="events" style="font-family:monospace;font-size:.85em;'
+        "background:#161b22;border:1px solid #30363d;border-radius:8px;"
+        'padding:16px;min-height:200px"></div>'
+        '<div class="nav"><a href="/run/' + run_id + '">← Run detail</a></div>'
+        "<script>"
+        "const box=document.getElementById('events');let cursor=0;"
+        "async function poll(){try{"
+        f"const r=await fetch('/api/run/{run_id}/events?after='+cursor);"
+        "const d=await r.json();cursor=d.cursor||cursor;"
+        "for(const e of d.events){const div=document.createElement('div');"
+        "div.textContent=`${(e.at||'').slice(0,19)}  ${e.task_id}  ${e.event}`;"
+        "box.appendChild(div);}"
+        "}catch(err){}setTimeout(poll,1500);}"
+        "poll();</script>"
+    )
     return HTMLResponse(content=body)
 
 

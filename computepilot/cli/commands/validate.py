@@ -7,12 +7,16 @@ from pathlib import Path
 import typer
 
 from computepilot.cli.ui import console, print_validation_report
+from computepilot.workflow.params import MissingParameterError, parse_set_args
 from computepilot.workflow.schema import load_workflow
 from computepilot.workflow.validator import validate
 
 
 def validate_workflow(
     workflow_path: str = typer.Argument(..., help="Path to workflow.yaml", metavar="WORKFLOW"),
+    set_param: list[str] | None = typer.Option(
+        None, "--set", help="Set workflow parameter before validating, e.g. --set epochs=50"
+    ),
 ) -> None:
     """Validate a workflow YAML file."""
     path = Path(workflow_path)
@@ -21,7 +25,14 @@ def validate_workflow(
         raise typer.Exit(2)
 
     try:
-        wf = load_workflow(path)
+        params = parse_set_args(set_param)
+        wf = load_workflow(path, params)
+    except MissingParameterError as exc:
+        console.print(f"[red]❌ {exc}[/red]")
+        raise typer.Exit(2) from exc
+    except ValueError as exc:
+        console.print(f"[red]❌ {exc}[/red]")
+        raise typer.Exit(2) from exc
     except Exception as exc:
         console.print(f"[red]❌ failed to parse workflow: {exc}[/red]")
         raise typer.Exit(2) from exc

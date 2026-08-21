@@ -99,7 +99,7 @@ class TestValidateCmd:
     def test_valid_workflow(self, tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
         wf = tmp_path / "workflow.yaml"
         wf.write_text(HELLO_YAML)
-        validate_cmd.validate_workflow(str(wf))
+        validate_cmd.validate_workflow(str(wf), set_param=None)
         assert "validation passed" in capsys.readouterr().out
 
     def test_missing_file(self) -> None:
@@ -111,14 +111,14 @@ class TestValidateCmd:
         wf = tmp_path / "broken.yaml"
         wf.write_text(":::: not yaml ::::")
         with pytest.raises(typer.Exit) as ei:
-            validate_cmd.validate_workflow(str(wf))
+            validate_cmd.validate_workflow(str(wf), set_param=None)
         assert ei.value.exit_code == 2
 
     def test_failed_validation(self, tmp_path: Path) -> None:
         wf = tmp_path / "cycle.yaml"
         wf.write_text(CYCLE_YAML)
         with pytest.raises(typer.Exit) as ei:
-            validate_cmd.validate_workflow(str(wf))
+            validate_cmd.validate_workflow(str(wf), set_param=None)
         assert ei.value.exit_code == 1
 
 
@@ -602,6 +602,7 @@ class TestRunCmd:
                 approve=True,
                 interactive=False,
                 from_session=None,
+                set_param=None,
             )
         assert ei.value.exit_code == 2
 
@@ -621,6 +622,7 @@ class TestRunCmd:
                 approve=False,
                 interactive=False,
                 from_session=None,
+                set_param=None,
             )
         assert ei.value.exit_code == 2
 
@@ -636,6 +638,7 @@ class TestRunCmd:
                 approve=False,
                 interactive=False,
                 from_session=None,
+                set_param=None,
             )
         assert ei.value.exit_code == 0
 
@@ -652,6 +655,7 @@ class TestRunCmd:
             approve=True,
             interactive=False,
             from_session=None,
+            set_param=None,
         )
         assert "completed successfully" in capsys.readouterr().out
 
@@ -669,6 +673,7 @@ class TestRunCmd:
                 approve=True,
                 interactive=False,
                 from_session=None,
+                set_param=None,
             )
         assert ei.value.exit_code == 1
 
@@ -1013,3 +1018,126 @@ class TestLiveTotalFallback:
         out = capsys.readouterr().out
         assert "(1/2)" in out
         assert "Run finished with 1 failures" in out
+
+
+# -- v0.8: run/validate --set parameterization ---------------------------------
+
+
+class TestRunWithParams:
+    def test_run_missing_param_exits_2(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        wf = tmp_path / "wf.yaml"
+        wf.write_text("name: p\ntasks:\n  - id: a\n    command: echo ${needme}\n    type: shell\n")
+        with pytest.raises(typer.Exit) as ei:
+            run_cmd.run(
+                str(wf),
+                executor="local",
+                max_concurrency=4,
+                approve=True,
+                interactive=False,
+                from_session=None,
+                set_param=None,
+            )
+        assert ei.value.exit_code == 2
+
+    def test_run_with_set_executes(
+        self, fake_home: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys
+    ) -> None:
+        wf = tmp_path / "wf.yaml"
+        wf.write_text(
+            "name: p\ntasks:\n  - id: a\n    command: echo ${word:-fallback}\n    type: shell\n"
+        )
+        monkeypatch.chdir(tmp_path)
+        run_cmd.run(
+            str(wf),
+            executor="local",
+            max_concurrency=4,
+            approve=True,
+            interactive=False,
+            from_session=None,
+            set_param=["word=given"],
+        )
+        assert "completed successfully" in capsys.readouterr().out
+
+    def test_validate_reports_missing(
+        self, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        wf = tmp_path / "wf.yaml"
+        wf.write_text("name: p\ntasks:\n  - id: a\n    command: echo ${needme}\n    type: shell\n")
+        with pytest.raises(typer.Exit) as ei:
+            validate_cmd.validate_workflow(str(wf), set_param=None)
+        assert ei.value.exit_code == 2
+        assert "needme" in capsys.readouterr().out
+
+
+# -- v0.8: runs clean -----------------------------------------------------------
+
+
+class TestRunsClean:
+    @pytest.fixture
+    def clean_db(self, fake_home: Path) -> Path:
+
+        db = fake_home / ".local/share/computepilot/state.db"
+        store = StateStore(db)
+        old = _make_run("r_old", RunStatus.SUCCEEDED)
+        store.create_run(old)
+        conn = sqlite3.connect(str(db))
+        conn.execute("UPDATE runs SET created_at='2020-01-01T00:00:00' WHERE id='r_old'")
+        conn.commit()
+        conn.close()
+        store.create_run(_make_run("r_new", RunStatus.SUCCEEDED))
+        store.transition_task("r_old", "t1", TaskStatus.SUCCEEDED, exit_code=0)
+        store.record_event("r_old", "t1", "started")
+        store.close()
+        return db
+
+    def test_dry_run_deletes_nothing(
+        self, clean_db: Path, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        from computepilot.cli.commands.runs import clean_runs
+
+        clean_runs(days=30, dry_run=True)
+        assert "Would delete 1 run(s)" in capsys.readouterr().out
+        conn = sqlite3.connect(str(clean_db))
+        n = conn.execute("SELECT COUNT(*) FROM runs").fetchone()[0]
+        conn.close()
+        assert n == 2
+
+    def test_clean_removes_only_old_terminal(
+        self, clean_db: Path, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        from computepilot.cli.commands.runs import clean_runs
+
+        clean_runs(days=30, dry_run=False)
+        conn = sqlite3.connect(str(clean_db))
+        ids = {r[0] for r in conn.execute("SELECT id FROM runs").fetchall()}
+        tasks = conn.execute("SELECT COUNT(*) FROM task_states").fetchone()[0]
+        events = conn.execute("SELECT COUNT(*) FROM task_events").fetchone()[0]
+        conn.close()
+        assert ids == {"r_new"}
+        assert tasks == 0 and events == 0
+        assert "Deleted 1 run(s)" in capsys.readouterr().out
+
+
+# -- v0.8: skill new scaffold ---------------------------------------------------
+
+
+class TestSkillNew:
+    def test_creates_yaml(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.chdir(tmp_path)
+        skill_cmd.new_skill("my_domain")
+        text = (tmp_path / "my_domain_skill.yaml").read_text()
+        assert text.startswith("name: my_domain")
+
+    def test_rejects_bad_name(self) -> None:
+        with pytest.raises(typer.Exit) as ei:
+            skill_cmd.new_skill("Bad-Name!")
+        assert ei.value.exit_code == 2
+
+    def test_existing_file(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.chdir(tmp_path)
+        (tmp_path / "dup_skill.yaml").write_text("name: dup\n")
+        with pytest.raises(typer.Exit) as ei:
+            skill_cmd.new_skill("dup")
+        assert ei.value.exit_code == 1

@@ -1,5 +1,26 @@
 # Changelog
 
+## v0.8.0 (2026-08-21)
+
+参数化与运维 — 工作流模板参数、运行数据生命周期管理。
+
+### 新功能
+
+- **工作流参数化** — YAML 中使用 `${key}`（必填）/ `${key:-default}`（默认值）占位符，
+  `cpilot run wf.yaml --set key=value` 注入；替换发生在校验之前；
+  缺失必填参数时明确报错列出全部缺失项（exit 2）
+  - 替换范围：command / args / environment / inputs / outputs
+  - `validate --set` 同步支持
+- **`cpilot runs` 命令组**
+  - `list [--limit N]` — 最近运行一览
+  - `clean [--days N] [--dry-run]` — 清理终态旧运行：五表行 + runs/ 目录，非终态保护
+- **Dashboard 实时事件页** `/run/{id}/live` — 轮询游标 API 的追加式事件流
+- **`cpilot skill new <name>`** — 技能 YAML 脚手架生成
+
+### 改进
+
+- **SQLite WAL 模式** — StateStore 启用 WAL，改善 CLI 与 Dashboard 并发读写
+
 ## v0.7.0 (2026-08-21)
 
 正确性与完整性收尾 — 溯源报告补全、实时进度修复、技能检视。
