@@ -110,7 +110,13 @@ def _live_progress(conn: sqlite3.Connection, run_id: str) -> None:
             total = 0
 
     if total <= 0:
-        # Fallback: watch with a generous total (we show what we know)
+        # Fall back to the number of tasks already recorded for this run
+        count_row = conn.execute(
+            "SELECT COUNT(DISTINCT task_id) AS c FROM task_states WHERE run_id = ?", (run_id,)
+        ).fetchone()
+        total = int(count_row["c"]) if count_row else 0
+    if total <= 0:
+        # Last resort: watch with a generous total (we show what we know)
         total = 100
 
     sentinel.watch(run_id, total_tasks=total)

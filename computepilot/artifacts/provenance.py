@@ -20,8 +20,12 @@ class ProvenanceBuilder:
     def __init__(self, run: Run) -> None:
         self.run = run
 
-    def build_manifest(self) -> dict[str, Any]:
-        """Return the manifest dictionary."""
+    def build_manifest(self, artifacts: list[dict[str, Any]] | None = None) -> dict[str, Any]:
+        """Return the manifest dictionary.
+
+        *artifacts* takes ``ArtifactStore.list_for_run`` rows; each is
+        normalized to an auditable reference with its checksum.
+        """
         return {
             "schema_version": 1,
             "run_id": self.run.id,
@@ -32,13 +36,25 @@ class ProvenanceBuilder:
             "code": self._detect_code_version(),
             "environment": {"type": "unknown"},
             "parameters": {},
-            "artifacts": [],
+            "artifacts": [self._artifact_ref(a) for a in (artifacts or [])],
             "task_events": [],
         }
 
-    def write_manifest(self, path: Path) -> Path:
+    @staticmethod
+    def _artifact_ref(artifact: dict[str, Any]) -> dict[str, Any]:
+        """Normalize one artifact row into a manifest artifact reference."""
+        return {
+            "id": str(artifact.get("id", "")),
+            "task_id": artifact.get("task_id"),
+            "path": str(artifact.get("path", "")),
+            "type": str(artifact.get("type", "")),
+            "sha256": str(artifact.get("checksum", "")),
+            "size": int(artifact.get("size") or 0),
+        }
+
+    def write_manifest(self, path: Path, artifacts: list[dict[str, Any]] | None = None) -> Path:
         """Write *manifest.json* to *path* and return the path."""
-        manifest = self.build_manifest()
+        manifest = self.build_manifest(artifacts)
         path.write_text(json.dumps(manifest, indent=2))
         return path
 

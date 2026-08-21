@@ -173,7 +173,7 @@ python scripts/check_deps.py
 pytest tests/unit/ tests/integration/ tests/e2e/ --cov=computepilot
 ```
 
-CI 每次 push 自动运行上述全部检查（含 coverage ≥ 80%，当前 87%）。
+CI 每次 push 自动运行上述全部检查（含 coverage ≥ 90%，当前 93%）。
 
 ---
 

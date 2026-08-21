@@ -55,7 +55,7 @@ jobs:
         run: >
           pytest tests/unit/ tests/integration/
           --cov=computepilot --cov-report=term-missing
-          --cov-fail-under=80
+          --cov-fail-under=90
         timeout-minutes: 5
 
       - name: E2E demo tests

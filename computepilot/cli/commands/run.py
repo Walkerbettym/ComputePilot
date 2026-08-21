@@ -6,7 +6,10 @@ import asyncio
 import uuid
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from computepilot.agent.conductor import Conductor
 
 import typer
 
@@ -76,7 +79,7 @@ def _sessions_dir() -> Path:
     return d
 
 
-def _build_conductor() -> object:
+def _build_conductor() -> Conductor:
     from computepilot.agent.conductor import Conductor
     from computepilot.agent.provider import OpenAIProvider
     from computepilot.skills.base import SkillRegistry
@@ -106,13 +109,11 @@ def _plan_and_execute(session: Any, executor: str, max_concurrency: int) -> None
 
 def _run_from_session(session_id: str, executor: str, max_concurrency: int) -> None:
     """Load a saved Conductor session and execute its planned workflow."""
-    from computepilot.agent.conductor import Conductor
 
     console.print(f"[bold]🤖 Resuming session[/bold] {session_id}")
     console.print()
 
     conductor = _build_conductor()
-    assert isinstance(conductor, Conductor)
     try:
         session = conductor.load_session(session_id, _sessions_dir())
     except FileNotFoundError:
@@ -128,13 +129,10 @@ def _run_from_session(session_id: str, executor: str, max_concurrency: int) -> N
 
 def _run_interactive(query: str, executor: str, max_concurrency: int) -> None:
     """Interactive Conductor session → approval → execution."""
-    from computepilot.agent.conductor import Conductor
-
     console.print("[bold]🤖 Interactive mode[/bold] (natural language → workflow → execute)")
     console.print()
 
     conductor = _build_conductor()
-    assert isinstance(conductor, Conductor)
 
     sid = conductor.new_session()
     user_input = query

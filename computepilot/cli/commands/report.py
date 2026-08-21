@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from typing import Any
 
 import typer
 
@@ -46,7 +47,18 @@ def report(
         raise typer.Exit(1)
 
     builder = ProvenanceBuilder(run)
-    manifest = builder.build_manifest()
+
+    # Collect registered artifacts (if any) for manifest + report table
+    artifact_rows: list[dict[str, Any]] = []
+    db_path = Path.home() / ".local" / "share" / "computepilot" / "state.db"
+    if db_path.exists():
+        from computepilot.artifacts.store import ArtifactStore
+
+        store = StateStore(db_path)
+        artifact_rows = ArtifactStore(store).list_for_run(run.id)
+        store.close()
+
+    manifest = builder.build_manifest(artifact_rows)
 
     # Determine output directory: use run_dir or current directory
     out_dir = run.run_dir if run.run_dir else Path.cwd()
@@ -54,7 +66,7 @@ def report(
 
     # Write manifest.json
     manifest_path = out_dir / "manifest.json"
-    builder.write_manifest(manifest_path)
+    builder.write_manifest(manifest_path, artifact_rows)
 
     # Write report.md
     report_path = out_dir / "report.md"
@@ -79,7 +91,25 @@ def report(
             "",
             "## Artifacts",
             "",
-            "*No artifacts registered.*",
+        ]
+    )
+    if artifact_rows:
+        lines.append(f"{len(artifact_rows)} artifact(s) registered:")
+        lines.append("")
+        lines.append("| ID | Task | Type | Size (B) | SHA256 | Path |")
+        lines.append("|---|---|---|---|---|---|")
+        for art in manifest["artifacts"]:
+            sha = str(art.get("sha256", ""))
+            short_sha = f"`{sha[:16]}…`" if len(sha) > 16 else f"`{sha}`"
+            task_id = str(art.get("task_id") or "-")
+            lines.append(
+                f"| {str(art['id'])[:12]} | {task_id} | {art['type']} "
+                f"| {art['size']} | {short_sha} | `{art['path']}` |"
+            )
+    else:
+        lines.append("*No artifacts registered.*")
+    lines.extend(
+        [
             "",
             "---",
             "",

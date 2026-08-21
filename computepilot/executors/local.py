@@ -34,7 +34,13 @@ class LocalExecutor:
         return errors
 
     async def submit(self, task: Task, run_dir: str, env: dict[str, str]) -> Handle:
-        cmd = [task.command] + list(task.args) if task.args else task.command.split()
+        if task.type == TaskType.SHELL:
+            # Shell tasks get full shell semantics (pipes, redirection, expansion)
+            cmd = ["bash", "-c", task.command]
+        elif task.args:
+            cmd = [task.command, *task.args]
+        else:
+            cmd = task.command.split()
         full_env = {**os.environ, **task.environment, **env}
         proc = await asyncio.create_subprocess_exec(
             *cmd,

@@ -58,8 +58,22 @@ def add_skill(path: str) -> None:
     console.print(msg)
 
 
+def show_skill(name: str) -> None:
+    """Show a skill's full definition as YAML."""
+    import yaml as _yaml
+
+    skill = _registry.get(name)
+    if skill is None:
+        console.print(f"[red]✗ Skill not found: {name}[/red]")
+        available = ", ".join(s.name for s in _registry.list_all())
+        console.print(f"[dim]Available: {available}[/dim]")
+        raise typer.Exit(1)
+    console.print(_yaml.dump(skill.model_dump(mode="json"), sort_keys=False), markup=False)
+
+
 skill_app = typer.Typer(help="Manage registered skills")
 
 
 skill_app.command(name="list")(list_skills)
 skill_app.command(name="add")(add_skill)
+skill_app.command(name="show")(show_skill)

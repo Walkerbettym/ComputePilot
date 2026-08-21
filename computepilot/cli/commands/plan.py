@@ -34,9 +34,7 @@ def plan(
     ),
 ) -> None:
     """Generate a workflow from a natural language description."""
-    from computepilot.agent.conductor import Conductor
     from computepilot.agent.provider import OpenAIProvider
-    from computepilot.skills.base import SkillRegistry
 
     provider_type = os.environ.get("COMPUTEPILOT_LLM_PROVIDER", "openai").lower()
 
@@ -47,9 +45,9 @@ def plan(
     provider = OpenAIProvider(model=model)
 
     if interactive:
-        registry = SkillRegistry()
-        registry.register_builtins()
-        cond = Conductor(provider=provider, registry=registry)
+        from computepilot.cli.commands.run import _build_conductor, _sessions_dir
+
+        cond = _build_conductor()
         sid = cond.new_session()
         user_input = description
         rounds = 0
@@ -67,6 +65,10 @@ def plan(
             else:
                 break
             rounds += 1
+        saved = cond.save_session(sid, _sessions_dir())
+        console.print(
+            f"[dim]Session saved: {saved} (resume with cpilot run --from-session {sid})[/dim]"
+        )
         return
 
     generator = WorkflowGenerator(provider)

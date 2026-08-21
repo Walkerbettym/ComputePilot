@@ -940,3 +940,76 @@ class TestLiveProgress:
         conn.close()
         out = capsys.readouterr().out
         assert "oom" in out
+
+
+# -- v0.7: report includes registered artifacts --------------------------------
+
+
+class TestReportArtifacts:
+    def test_report_lists_artifacts(
+        self,
+        state_db: Path,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        from computepilot.artifacts.store import ArtifactStore
+
+        f = tmp_path / "out.bin"
+        f.write_bytes(b"payload-bytes")
+        store = StateStore(state_db)
+        meta = ArtifactStore(store).register("r_done", "t1", f, "result")
+        store.close()
+        monkeypatch.chdir(tmp_path)
+
+        report_cmd.report("r_done")
+        text = (tmp_path / "report.md").read_text()
+        assert "1 artifact(s) registered" in text
+        assert "| ID | Task | Type | Size (B) | SHA256 | Path |" in text
+        assert "result" in text and str(meta["checksum"])[:16] in text
+
+        manifest = json.loads((tmp_path / "manifest.json").read_text())
+        assert manifest["artifacts"][0]["sha256"] == meta["checksum"]
+        assert manifest["artifacts"][0]["size"] == len(b"payload-bytes")
+
+    def test_report_without_artifacts_keeps_placeholder(
+        self, state_db: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.chdir(tmp_path)
+        report_cmd.report("r_done")
+        assert "*No artifacts registered.*" in (tmp_path / "report.md").read_text()
+
+
+# -- v0.7: skill show -----------------------------------------------------------
+
+
+class TestSkillShow:
+    def test_show_yaml(self, capsys: pytest.CaptureFixture[str]) -> None:
+        skill_cmd.show_skill("python")
+        out = capsys.readouterr().out
+        assert out.lstrip().startswith("name: python")
+        assert "capabilities" in out
+
+    def test_show_unknown(self) -> None:
+        with pytest.raises(typer.Exit) as ei:
+            skill_cmd.show_skill("nope")
+        assert ei.value.exit_code == 1
+
+
+# -- v0.7: status --live real total from task_states ----------------------------
+
+
+class TestLiveTotalFallback:
+    def test_total_from_task_states_when_no_config(
+        self, state_db: Path, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        conn = sqlite3.connect(str(state_db))
+        conn.row_factory = sqlite3.Row
+
+        from computepilot.cli.commands.status import _live_progress
+
+        _live_progress(conn, "r_running")
+        conn.close()
+        out = capsys.readouterr().out
+        assert "(1/2)" in out
+        assert "Run finished with 1 failures" in out

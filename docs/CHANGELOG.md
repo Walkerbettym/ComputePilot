@@ -1,5 +1,33 @@
 # Changelog
 
+## v0.7.0 (2026-08-21)
+
+正确性与完整性收尾 — 溯源报告补全、实时进度修复、技能检视。
+
+### 修复（"声明了但未兑现"缺陷）
+
+- **`cpilot report` 制品表** — 此前无论是否注册制品，报告恒写 "*No artifacts registered.*"；
+  现在渲染完整制品表（ID/任务/类型/大小/SHA256/路径）
+- **`manifest.json` artifacts 字段** — 此前恒为空数组，违背 "Everything Reproducible"（spec P3）；
+  `ProvenanceBuilder.build_manifest(artifacts=...)` 现输出
+  `{id, task_id, path, type, sha256, size}` 可审计引用
+- **`status --live` 进度分母** — config 缺失 total_tasks 时不再硬编码 100，
+  改用 task_states 中实际记录的任务数
+- **`type: shell` 任务支持完整 shell 语义** — 此前经 exec 直接执行，
+  重定向/管道/变量展开静默失效（`echo x > f.txt` 会把 `>` 当字面参数）；
+  现在 SHELL 任务经 `bash -c` 执行，与类型语义一致（python/docker 任务不变）
+
+### 新功能
+
+- **`cpilot skill show <name>`** — 以 YAML 输出技能完整定义，便于领域技能编写者参考结构
+- **`plan --interactive` 会话保存** — 与 `run --interactive` 对齐：对话结束自动保存并提示恢复命令
+
+### 开发质量
+
+- 覆盖率 87% → **93%**（CI 阈值同步上调至 90）
+- 新增 CLI 驱动执行器测试 ×34：SlurmExecutor / DockerExecutor / KubernetesExecutor
+  全链路（submit/status/cancel/logs/collect）基于 mock subprocess，无需真实集群/Docker/K8s
+
 ## v0.6.0 (2026-08-21)
 
 会话可观测性与 API 化 — 让保存的会话、运行数据可查询、可脚本化。
