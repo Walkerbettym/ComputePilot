@@ -153,6 +153,7 @@ cpilot report <run-id>      # 生成 report.md + manifest.json（可复现）
 | `cpilot artifacts` | 列出制品 |
 | `cpilot report` | 生成溯源报告 |
 | `cpilot skill` | 管理技能注册表 |
+| `cpilot sessions` | 查看/清理已保存的交互会话 |
 
 ---
 

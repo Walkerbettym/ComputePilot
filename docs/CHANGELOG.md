@@ -1,5 +1,26 @@
 # Changelog
 
+## v0.6.0 (2026-08-21)
+
+会话可观测性与 API 化 — 让保存的会话、运行数据可查询、可脚本化。
+
+### 新功能
+
+- **`cpilot sessions`** — 会话管理命令组
+  - `list` — 已保存交互会话一览（id/阶段/意图/时间）
+  - `show <id>` — 完整对话历史 + 提取的 Intent + 恢复提示
+  - `clean [--days N]` — 清理旧会话（默认 30 天）
+- **JSON API（Dashboard 同源）**
+  - `GET /api/runs` — 运行列表
+  - `GET /api/run/{id}` — 详情：元数据 + 任务 + 全部事件 + workflow 结构
+  - `GET /api/run/{id}/events?after=N` — 增量事件游标轮询（实时 tail 客户端基础）
+- **运行详情页 Events 区块** — 最近 20 条任务事件表
+
+### 改进
+
+- **SVG 渲染器提取为共享模块** `cli/svgdag.py` — CLI 与 Dashboard 复用同一实现
+- **`cpilot dag --format svg [-o 文件]`** — 独立 SVG 输出（带 width/height 属性，可直接嵌入文档/浏览器打开）
+
 ## v0.5.0 (2026-08-21)
 
 从"生产可用"到"规模与领域生态"。

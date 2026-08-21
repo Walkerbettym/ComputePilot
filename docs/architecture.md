@@ -108,7 +108,9 @@ cpilot
 ├── cancel     取消运行
 ├── artifacts  列出制品
 ├── report     生成溯源报告
-└── skill      管理技能
+├── skill      管理技能
+├── sessions   查看已保存交互会话（list/show/clean）
+└── Web API    /api/runs · /api/run/{id} · /api/run/{id}/events
 ```
 
 ## 状态机

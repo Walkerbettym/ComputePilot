@@ -444,13 +444,13 @@ class TestWebUI:
         assert "<svg" in resp.text
 
     def test_dag_svg_cycle_returns_none(self) -> None:
-        from computepilot.cli.webui import dag_svg
+        from computepilot.cli.svgdag import render_svg
 
         cyclic = [
             {"id": "a", "depends_on": ["b"]},
             {"id": "b", "depends_on": ["a"]},
         ]
-        assert dag_svg(cyclic) is None
+        assert render_svg(cyclic) is None
 
     def test_run_detail_bad_config(self, webui_db: Path) -> None:
         from fastapi.testclient import TestClient

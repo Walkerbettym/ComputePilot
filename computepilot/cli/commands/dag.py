@@ -1,4 +1,4 @@
-"""cpilot dag — visualize a workflow DAG (ascii / mermaid / json)."""
+"""cpilot dag — visualize a workflow DAG (ascii / mermaid / json / svg)."""
 
 from __future__ import annotations
 
@@ -7,19 +7,21 @@ from pathlib import Path
 
 import typer
 
+from computepilot.cli.svgdag import render_svg
 from computepilot.cli.ui import console
 from computepilot.models.workflow import Task
 from computepilot.workflow.dag import DAG, build_dag
 from computepilot.workflow.schema import load_workflow
 
-_FORMATS = ("ascii", "mermaid", "json")
+_FORMATS = ("ascii", "mermaid", "json", "svg")
 
 
 def render_dag(
     workflow_path: str = typer.Argument(..., help="Path to workflow.yaml", metavar="WORKFLOW"),
     format: str = typer.Option(
-        "ascii", "--format", "-f", help="Output format: ascii | mermaid | json"
+        "ascii", "--format", "-f", help="Output format: ascii | mermaid | json | svg"
     ),
+    output: str | None = typer.Option(None, "--output", "-o", help="Write result to this file"),
 ) -> None:
     """Render a workflow's task dependency graph."""
     if format not in _FORMATS:
@@ -49,11 +51,28 @@ def render_dag(
         raise typer.Exit(1) from None
 
     if format == "mermaid":
-        console.print(_render_mermaid(dag), markup=False)
+        text = _render_mermaid(dag)
     elif format == "json":
-        console.print(json.dumps(_to_json(dag, order), indent=2), markup=False)
+        text = json.dumps(_to_json(dag, order), indent=2)
+    elif format == "svg":
+        cfg_tasks: list[dict[str, object]] = [
+            {"id": t.id, "depends_on": list(t.depends_on)} for t in dag.workflow.tasks
+        ]
+        svg = render_svg(cfg_tasks)
+        if svg is None:
+            console.print("[red]❌ Cannot render SVG for this workflow[/red]")
+            raise typer.Exit(1)
+        text = svg
     else:
-        console.print(_render_ascii(dag), markup=False)
+        text = _render_ascii(dag)
+
+    if output:
+        out_path = Path(output)
+        out_path.parent.mkdir(parents=True, exist_ok=True)
+        out_path.write_text(text, encoding="utf-8")
+        console.print(f"[green]✓ Written to {out_path}[/green]")
+    else:
+        console.print(text, markup=False)
 
 
 def _task_meta(task: Task) -> str:

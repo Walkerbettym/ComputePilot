@@ -9,7 +9,9 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 from fastapi import FastAPI
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, JSONResponse
+
+from computepilot.cli.svgdag import render_svg
 
 app = FastAPI(title="ComputePilot Dashboard")
 
@@ -43,6 +45,7 @@ a:hover{text-decoration:underline}
 .nav{margin:16px 0}
 .empty{color:#8b949e;text-align:center;padding:40px}
 code{padding:2px 6px;background:#21262d;border-radius:4px;font-size:.85em}
+.t{color:#8b949e;font-size:.85em}
 </style>"""
 
 
@@ -141,13 +144,28 @@ async def run_detail(run_id: str) -> HTMLResponse:
                     cfg_tasks = [t for t in raw_tasks if isinstance(t, dict)]
     body += "</table>"
 
+    # -- Events (latest 20) ----------------------------------------------------
+    event_rows = conn.execute(
+        "SELECT task_id,event,at FROM task_events WHERE run_id=? ORDER BY id DESC LIMIT 20",
+        (run_id,),
+    ).fetchall()
+    if event_rows:
+        body += "<h3>Events</h3><table><tr><th>Time</th><th>Task</th><th>Event</th></tr>"
+        for ev in reversed(event_rows):
+            at = str(ev["at"])[:19]
+            body += (
+                f'<tr><td class="t">{at}</td>'
+                f"<td><code>{ev['task_id']}</code></td><td>{ev['event']}</td></tr>"
+            )
+        body += "</table>"
+
     tasks = conn.execute(
         "SELECT task_id,status,exit_code,error FROM task_states WHERE run_id=?", (run_id,)
     ).fetchall()
     conn.close()
     if cfg_tasks:
         status_by_task = {t["task_id"]: t["status"] for t in tasks}
-        svg = _dag_svg(cfg_tasks, status_by_task)
+        svg = render_svg(cfg_tasks, status_by_task)
         if svg:
             body += f"<h3>DAG</h3>{svg}"
     if tasks:
@@ -169,112 +187,94 @@ async def run_detail(run_id: str) -> HTMLResponse:
     return HTMLResponse(content=body)
 
 
-_NODE_W, _NODE_H, _GAP_X, _GAP_Y = 130, 34, 46, 16
-
-_STATUS_FILL = {
-    "succeeded": "#12351f",
-    "failed": "#3d1418",
-    "running": "#1c2f4a",
-    "skipped": "#2a2f36",
-}
+# -- JSON API (scripting / external tooling) -----------------------------------
 
 
-def dag_svg(cfg_tasks: list[dict[str, object]]) -> str | None:
-    """Render a layered left-to-right SVG dependency graph (no external deps)."""
-    return _dag_svg(cfg_tasks, {})
+def _cfg_workflow(row: sqlite3.Row) -> dict[str, object]:
+    """Extract the persisted workflow structure from a runs row, if any."""
+    try:
+        cfg = json.loads(row["config_json"]) if row["config_json"] else {}
+    except (json.JSONDecodeError, TypeError):
+        return {}
+    wf = cfg.get("workflow") if isinstance(cfg, dict) else None
+    return wf if isinstance(wf, dict) else {}
 
 
-def _dag_svg(cfg_tasks: list[dict[str, object]], status_by_task: dict[str, object]) -> str | None:
-    """Layered SVG from [{id, depends_on}] task dicts; None when empty/oversized."""
-    ids = [str(t["id"]) for t in cfg_tasks if t.get("id")]
-    if not ids or len(ids) > 200:
-        return None
-    idset = set(ids)
-    deps: dict[str, list[str]] = {}
-    for t in cfg_tasks:
-        tid = t.get("id")
-        if not tid:
-            continue
-        raw = t.get("depends_on")
-        plist = [str(d) for d in raw if d in idset] if isinstance(raw, list) else []
-        deps[str(tid)] = plist
+@app.get("/api/runs")
+async def api_runs() -> JSONResponse:
+    """List all runs as JSON."""
+    if not STATE_DB.exists():
+        return JSONResponse(content={"runs": []})
+    conn = _db()
+    rows = conn.execute(
+        "SELECT id,status,executor,workflow_name,created_at FROM runs ORDER BY created_at DESC"
+    ).fetchall()
+    conn.close()
+    return JSONResponse(content={"runs": [dict(r) for r in rows]})
 
-    # Kahn layering: layer[n] = 1 + max(layer[p] for p in deps)
-    indeg = {i: len(deps[i]) for i in ids}
-    layer = {i: 0 for i in ids}
-    queue = [i for i in ids if indeg[i] == 0]
-    seen = 0
-    while queue:
-        nxt: list[str] = []
-        for nid in queue:
-            seen += 1
-            for cid, plist in deps.items():
-                if nid in plist and cid in indeg:
-                    indeg[cid] -= 1
-                    layer[cid] = max(layer[cid], layer[nid] + 1)
-                    if indeg[cid] == 0:
-                        nxt.append(cid)
-        queue = nxt
-    if seen != len(ids):  # cycle — skip rendering
-        return None
 
-    columns: dict[int, list[str]] = {}
-    for i in ids:
-        columns.setdefault(layer[i], []).append(i)
-
-    def node_xy(nid: str) -> tuple[float, float]:
-        col = columns[layer[nid]]
-        row = col.index(nid)
-        x = layer[nid] * (_NODE_W + _GAP_X)
-        y = row * (_NODE_H + _GAP_Y)
-        return x + 10, y + 10
-
-    width = (max(columns) + 1) * (_NODE_W + _GAP_X)
-    height = max(len(c) for c in columns.values()) * (_NODE_H + _GAP_Y) + 20
-    parts = [
-        f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {width} {height}" '
-        f'style="max-width:{width}px;background:#0d1117;border:1px solid #30363d;'
-        f'border-radius:8px;margin:12px 0">',
-        '<defs><marker id="arw" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto">'
-        '<path d="M0,0 L6,3 L0,6 Z" fill="#58a6ff"/></marker></defs>',
+@app.get("/api/run/{run_id}")
+async def api_run(run_id: str) -> JSONResponse:
+    """Full run detail: metadata, task states, events, and workflow structure."""
+    if not STATE_DB.exists():
+        return JSONResponse(content={"error": "no database"}, status_code=404)
+    conn = _db()
+    row = conn.execute("SELECT * FROM runs WHERE id = ?", (run_id,)).fetchone()
+    if row is None:
+        conn.close()
+        return JSONResponse(content={"error": "run not found"}, status_code=404)
+    tasks = [
+        dict(t)
+        for t in conn.execute(
+            "SELECT task_id,status,attempt,exit_code,error FROM task_states WHERE run_id=?",
+            (run_id,),
+        ).fetchall()
     ]
-    from html import escape as e
+    events = [
+        dict(ev)
+        for ev in conn.execute(
+            "SELECT id,task_id,event,at,payload FROM task_events WHERE run_id=? ORDER BY id",
+            (run_id,),
+        ).fetchall()
+    ]
+    conn.close()
+    return JSONResponse(
+        content={
+            "run": {
+                "id": row["id"],
+                "status": row["status"],
+                "workflow_name": row["workflow_name"],
+                "workflow_sha256": row["workflow_sha256"],
+                "executor": row["executor"],
+                "created_at": row["created_at"],
+                "started_at": row["started_at"],
+                "finished_at": row["finished_at"],
+                "config": _cfg_workflow(row),
+            },
+            "tasks": tasks,
+            "events": events,
+        }
+    )
 
-    for t in cfg_tasks:
-        for d in deps[str(t["id"])]:
-            x1, y1 = node_xy(d)
-            x2, y2 = node_xy(str(t["id"]))
-            parts.append(
-                f'<path d="M{x1 + _NODE_W},{y1 + _NODE_H // 2} '
-                f"C{x1 + _NODE_W + _GAP_X // 2},{y1 + _NODE_H // 2} "
-                f'{x2 - _GAP_X // 2},{y2 + _NODE_H // 2} {x2},{y2 + _NODE_H // 2}" '
-                'stroke="#58a6ff" stroke-width="1.2" fill="none" marker-end="url(#arw)" '
-                'opacity="0.55"/>'
-            )
-    for tid in ids:
-        x, y = node_xy(tid)
-        st = status_by_task.get(tid)
-        fill = _STATUS_FILL.get(str(st), "#161b22")
-        stroke = (
-            "#3fb950"
-            if st == "succeeded"
-            else "#f85149"
-            if st == "failed"
-            else "#d2a8ff"
-            if st == "running"
-            else "#30363d"
-        )
-        parts.append(
-            f'<rect x="{x}" y="{y}" width="{_NODE_W}" height="{_NODE_H}" rx="6" '
-            f'fill="{fill}" stroke="{stroke}" stroke-width="1.2"/>'
-        )
-        label = e(tid[:18])
-        parts.append(
-            f'<text x="{x + _NODE_W / 2}" y="{y + _NODE_H / 2 + 4}" text-anchor="middle" '
-            f'font-family="sans-serif" font-size="11.5" fill="#c9d1d9">{label}</text>'
-        )
-    parts.append("</svg>")
-    return "".join(parts)
+
+@app.get("/api/run/{run_id}/events")
+async def api_events(run_id: str, after: int = 0) -> JSONResponse:
+    """Incremental event feed: events with id > ``after`` (poll-friendly tail)."""
+    if not STATE_DB.exists():
+        return JSONResponse(content={"events": [], "cursor": after})
+    conn = _db()
+    exists = conn.execute("SELECT 1 FROM runs WHERE id = ?", (run_id,)).fetchone()
+    if exists is None:
+        conn.close()
+        return JSONResponse(content={"error": "run not found"}, status_code=404)
+    rows = conn.execute(
+        "SELECT id,task_id,event,at,payload FROM task_events "
+        "WHERE run_id=? AND id > ? ORDER BY id LIMIT 500",
+        (run_id, after),
+    ).fetchall()
+    conn.close()
+    cursor = max((r["id"] for r in rows), default=after)
+    return JSONResponse(content={"events": [dict(r) for r in rows], "cursor": cursor})
 
 
 def main() -> None:

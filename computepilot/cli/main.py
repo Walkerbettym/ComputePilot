@@ -14,6 +14,7 @@ from computepilot.cli.commands import (
     report,
     resume,
     run,
+    sessions,
     skill,
     status,
     validate,
@@ -35,6 +36,7 @@ app.command(name="plan")(plan.plan)
 app.command(name="artifacts")(artifacts.artifacts)
 app.command(name="report")(report.report)
 app.add_typer(skill.skill_app, name="skill")
+app.add_typer(sessions.sessions_app, name="sessions")
 app.command(name="resume")(resume.resume)
 app.command(name="cancel")(cancel.cancel)
 

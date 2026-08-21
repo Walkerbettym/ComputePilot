@@ -507,12 +507,12 @@ tasks:                           # 必填,≥ 1 个
 ```python
 class Workflow(BaseModel):
     id: UUID
-    name: str                          # ^[a-z0-9_-]{1,64}$
+    name: str  # ^[a-z0-9_-]{1,64}$
     description: str | None = None
     version: str = "0.1.0"
     schema_version: int = 1
-    source: Path | None = None         # 原始 workflow.yaml 路径
-    sha256: str                        # 冻结内容哈希(不含 source)
+    source: Path | None = None  # 原始 workflow.yaml 路径
+    sha256: str  # 冻结内容哈希(不含 source)
     variables: dict[str, JSONScalar] = {}
     env: dict[str, str] = {}
     defaults: PartialTask | None = None
@@ -529,12 +529,14 @@ class TaskType(str, Enum):
     DOCKER = "docker"
     SLURM = "slurm"
 
+
 class Resources(BaseModel):
     cpu: int = 1
-    memory: str = "2GB"                # parseable: 512MB|2GB|4GiB
+    memory: str = "2GB"  # parseable: 512MB|2GB|4GiB
     gpu: int = 0
     partition: str | None = None
     walltime: timedelta | None = None
+
 
 class RetryPolicy(BaseModel):
     max_attempts: int = 1
@@ -544,8 +546,9 @@ class RetryPolicy(BaseModel):
     retryable_exit_codes: list[int] = [1, 2, 137]
     retryable_signals: list[str] = []
 
+
 class Task(BaseModel):
-    id: str                            # 唯一
+    id: str  # 唯一
     type: TaskType
     command: str
     args: list[str] = []
@@ -554,8 +557,8 @@ class Task(BaseModel):
     depends_on: list[str] = []
     resources: Resources = Resources()
     environment: dict[str, str] = {}
-    image: str | None = None           # 仅 docker
-    volumes: list[str] = []            # 仅 docker
+    image: str | None = None  # 仅 docker
+    volumes: list[str] = []  # 仅 docker
     retry_policy: RetryPolicy = RetryPolicy()
     timeout: timedelta | None = None
     checkpoint: bool = True
@@ -567,7 +570,7 @@ class Task(BaseModel):
 
 ```python
 class RunStatus(str, Enum):
-    CREATED = "created"                # 已创建,未校验
+    CREATED = "created"  # 已创建,未校验
     VALIDATING = "validating"
     PENDING_APPROVAL = "pending_approval"
     RUNNING = "running"
@@ -576,23 +579,25 @@ class RunStatus(str, Enum):
     FAILED = "failed"
     CANCELLED = "cancelled"
 
+
 class TaskStatus(str, Enum):
-    PENDING = "pending"                # 依赖未就绪
-    READY = "ready"                    # 可调度
+    PENDING = "pending"  # 依赖未就绪
+    READY = "ready"  # 可调度
     RUNNING = "running"
     SUCCEEDED = "succeeded"
     FAILED = "failed"
     RETRYING = "retrying"
-    SKIPPED = "skipped"                # 缓存命中或上游失败跳过
+    SKIPPED = "skipped"  # 缓存命中或上游失败跳过
     CANCELLED = "cancelled"
 
+
 class Run(BaseModel):
-    id: str                            # experiment-YYYY-MM-DD-NNN
+    id: str  # experiment-YYYY-MM-DD-NNN
     workflow_id: UUID
     workflow_sha256: str
     status: RunStatus
-    executor: str                      # local|docker|slurm
-    config: dict[str, Any] = {}        # 冻结 config.yaml
+    executor: str  # local|docker|slurm
+    config: dict[str, Any] = {}  # 冻结 config.yaml
     created_at: datetime
     started_at: datetime | None = None
     finished_at: datetime | None = None
@@ -600,36 +605,39 @@ class Run(BaseModel):
     metrics: dict[str, Any] = {}
     manifest: Manifest | None = None
 
+
 class ArtifactRef(BaseModel):
     task_id: str
     path: str
-    type: str                          # data|model|figure|log|report|checkpoint
-    checksum: str                      # sha256
+    type: str  # data|model|figure|log|report|checkpoint
+    checksum: str  # sha256
     size: int
     created_at: datetime
 
-class Manifest(BaseModel):             # §14.2 结构
+
+class Manifest(BaseModel):  # §14.2 结构
     schema_version: int = 1
     run_id: str
-    workflow: str                      # sha256
-    code: str                          # git commit 或目录哈希
-    environment: str                   # lock 文件哈希 + 摘要
-    dataset: dict[str, str] = {}       # 输入文件 → sha256
+    workflow: str  # sha256
+    code: str  # git commit 或目录哈希
+    environment: str  # lock 文件哈希 + 摘要
+    dataset: dict[str, str] = {}  # 输入文件 → sha256
     parameters: dict[str, Any] = {}
     artifacts: list[ArtifactRef]
-    task_events: list[TaskEvent]       # 含 checkpoint 摘要
+    task_events: list[TaskEvent]  # 含 checkpoint 摘要
 ```
 
 ### 8.4 Intent / Skill / Diagnosis
 
 ```python
 class Intent(BaseModel):
-    verb: str                          # sweep|train|simulate|analyze|...
-    target: str                        # 对象: simulation, model, ...
-    parameters: dict[str, Any] = {}    # {name, start, end, step, num_points, repeats, ...}
+    verb: str  # sweep|train|simulate|analyze|...
+    target: str  # 对象: simulation, model, ...
+    parameters: dict[str, Any] = {}  # {name, start, end, step, num_points, repeats, ...}
     resources: Resources = Resources()
-    constraints: dict[str, Any] = {}   # walltime, max_cost, accuracy...
-    assumptions: list[str] = []        # 显式列出隐含假设,供用户确认
+    constraints: dict[str, Any] = {}  # walltime, max_cost, accuracy...
+    assumptions: list[str] = []  # 显式列出隐含假设,供用户确认
+
 
 class Skill(BaseModel):
     name: str
@@ -642,13 +650,14 @@ class Skill(BaseModel):
     templates: list[Path] = []
     docs: Path | None = None
 
+
 class Diagnosis(BaseModel):
     task_id: str
-    cause: str                         # OOM|TIMEOUT|MISSING_INPUT|SYNTAX_ERROR|NODE_FAIL|UNKNOWN
+    cause: str  # OOM|TIMEOUT|MISSING_INPUT|SYNTAX_ERROR|NODE_FAIL|UNKNOWN
     confidence: float
     explanation: str
     suggested_action: Literal["retry", "repair", "human", "abort"]
-    repair: RepairSpec | None = None   # 如 {increase_memory: {factor: 2.0}}
+    repair: RepairSpec | None = None  # 如 {increase_memory: {factor: 2.0}}
 ```
 
 ---
@@ -822,14 +831,20 @@ Artifact 注册时机: 任务 SUCCEEDED 时扫描声明 `outputs`(缺失 → FAI
 ```python
 class LLMProvider(Protocol):
     name: str
-    def generate(self, messages: list[Message], *,
-                 model: str | None = None,
-                 temperature: float = 0.0,
-                 max_tokens: int | None = None) -> LLMResponse: ...
-    def structured_output(self, messages: list[Message],
-                          schema: type[BaseModel], *,
-                          model: str | None = None) -> BaseModel: ...
-    def usage(self) -> Usage: ...        # tokens, calls(累计,供 FR-22/NFR-09)
+
+    def generate(
+        self,
+        messages: list[Message],
+        *,
+        model: str | None = None,
+        temperature: float = 0.0,
+        max_tokens: int | None = None,
+    ) -> LLMResponse: ...
+    def structured_output(
+        self, messages: list[Message], schema: type[BaseModel], *, model: str | None = None
+    ) -> BaseModel: ...
+    def usage(self) -> Usage: ...  # tokens, calls(累计,供 FR-22/NFR-09)
+
 
 # 内置适配器: OpenAIProvider / AnthropicProvider / GeminiProvider /
 #             OpenAICompatProvider(vLLM、Ollama、DeepSeek 等)
@@ -1121,7 +1136,7 @@ class TaskResult:
     stderr_tail: str
     resource_usage: ResourceUsage | None
     error: str | None
-    outputs: dict[str, str]          # path → sha256
+    outputs: dict[str, str]  # path → sha256
 ```
 
 ### 13.2 失败分类表(Diagnoser 规则层)
