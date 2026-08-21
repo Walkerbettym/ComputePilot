@@ -1,5 +1,25 @@
 # Changelog
 
+## v0.9.0 (2026-08-21)
+
+复现性闭环与编程接口 — 让"可复现"可验证、让引擎可被 Python 直接调用。
+
+### 新功能
+
+- **`cpilot verify <run_a> <run_b>`** — 可复现性一键验证：对比 workflow sha256、
+  任务状态/退出码、制品 checksum（按 task+type 对齐，跨运行目录可比）；
+  exit 0=REPRODUCIBLE / 1=差异 / 2=错误；`--json` 机器可读
+- **Python API 层 `computepilot.api`** — `run / resume / status / list_runs /
+  artifacts / report / cancel / verify`，同步函数内部桥接 asyncio，
+  `state_dir` 参数支持嵌入隔离；Jupyter 无需子进程驱动引擎
+- **`cpilot artifacts RUN_ID --get [-o DIR] [--task T]`** — 导出制品文件，
+  复制时重算 sha256 与注册值比对，篡改即告警（exit 1）
+
+### 修复
+
+- **artifacts.id 主键冲突** — 此前 id=checksum[:16]，两次运行产出相同内容即触发
+  UNIQUE 约束失败；改为按 (run_id, path, checksum) 派生的行唯一标识
+
 ## v0.8.0 (2026-08-21)
 
 参数化与运维 — 工作流模板参数、运行数据生命周期管理。

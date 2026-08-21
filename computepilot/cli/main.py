@@ -19,6 +19,7 @@ from computepilot.cli.commands import (
     skill,
     status,
     validate,
+    verify,
 )
 
 app = typer.Typer(
@@ -41,6 +42,7 @@ app.add_typer(sessions.sessions_app, name="sessions")
 app.add_typer(runs.runs_app, name="runs")
 app.command(name="resume")(resume.resume)
 app.command(name="cancel")(cancel.cancel)
+app.command(name="verify")(verify.verify)
 
 if __name__ == "__main__":
     app()

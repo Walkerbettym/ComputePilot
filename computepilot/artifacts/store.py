@@ -43,7 +43,7 @@ class ArtifactStore:
         p = Path(path)
         checksum = hashlib.sha256(p.read_bytes()).hexdigest()
         size = p.stat().st_size
-        aid = checksum[:16]
+        aid = hashlib.sha256(f"{run_id}:{p}:{checksum}".encode()).hexdigest()[:16]
 
         self.state._conn.execute(
             "INSERT INTO artifacts (id, run_id, task_id, path, type, checksum, size, created_at) "

@@ -14,6 +14,7 @@ import typer
 
 from computepilot.agent.conductor import Conductor, TurnResponse
 from computepilot.agent.intent import Intent
+from computepilot.artifacts.store import ArtifactStore
 from computepilot.cli.commands import artifacts as artifacts_cmd
 from computepilot.cli.commands import cancel as cancel_cmd
 from computepilot.cli.commands import init as init_cmd
@@ -25,6 +26,7 @@ from computepilot.cli.commands import run as run_cmd
 from computepilot.cli.commands import skill as skill_cmd
 from computepilot.cli.commands import status as status_cmd
 from computepilot.cli.commands import validate as validate_cmd
+from computepilot.cli.commands import verify as verify_cmd
 from computepilot.cli.ui import (
     build_task_summary,
     print_run_detail,
@@ -258,11 +260,11 @@ class TestInitCmd:
 class TestArtifactsCmd:
     def test_no_db(self, fake_home: Path) -> None:
         with pytest.raises(typer.Exit) as ei:
-            artifacts_cmd.artifacts("whatever")
+            artifacts_cmd.artifacts("whatever", get=False, task_id=None, output="./x")
         assert ei.value.exit_code == 0
 
     def test_empty_artifacts(self, state_db: Path, capsys: pytest.CaptureFixture[str]) -> None:
-        artifacts_cmd.artifacts("r_done")
+        artifacts_cmd.artifacts("r_done", get=False, task_id=None, output="./x")
         assert "No artifacts found" in capsys.readouterr().out
 
     def test_list_artifacts(
@@ -276,7 +278,7 @@ class TestArtifactsCmd:
         ArtifactStore(store).register("r_done", "t1", f, "result")
         store.close()
 
-        artifacts_cmd.artifacts("r_done")
+        artifacts_cmd.artifacts("r_done", get=False, task_id=None, output="./x")
         out = capsys.readouterr().out
         assert "Artifacts for run r_done" in out
         assert '"type": "result"' in out
@@ -1141,3 +1143,111 @@ class TestSkillNew:
         with pytest.raises(typer.Exit) as ei:
             skill_cmd.new_skill("dup")
         assert ei.value.exit_code == 1
+
+
+# -- v0.9: cpilot verify ---------------------------------------------------------
+
+
+class TestVerifyCmd:
+    @pytest.fixture
+    def two_runs(self, fake_home: Path, tmp_path: Path) -> Path:
+
+        from computepilot.artifacts.store import ArtifactStore
+
+        db = fake_home / ".local/share/computepilot/state.db"
+        store = StateStore(db)
+        f1 = tmp_path / "a.txt"
+        f2 = tmp_path / "b.txt"
+        f1.write_text("same")
+        f2.write_text("same")
+        for rid in ("r_x", "r_y"):
+            store.create_run(_make_run(rid, RunStatus.SUCCEEDED))
+            store.transition_task(rid, "t1", TaskStatus.SUCCEEDED, exit_code=0)
+            ArtifactStore(store).register(rid, "t1", f1 if rid == "r_x" else f2, "result")
+        store.close()
+        return db
+
+    def test_identical_exit_0(self, two_runs: Path) -> None:
+        with pytest.raises(typer.Exit) as ei:
+            verify_cmd.verify("r_x", "r_y", json_output=False)
+        assert ei.value.exit_code == 0
+
+    def test_json_output(self, two_runs: Path, capsys: pytest.CaptureFixture[str]) -> None:
+        with pytest.raises(typer.Exit):
+            verify_cmd.verify("r_x", "r_y", json_output=True)
+        data = json.loads(capsys.readouterr().out)
+        assert data["reproducible"] is True
+        assert any(c["category"] == "artifact" for c in data["checks"])
+
+    def test_differences_exit_1(self, two_runs: Path, tmp_path: Path) -> None:
+        f = tmp_path / "c.txt"
+        f.write_text("DIFFERENT")
+        store = StateStore(two_runs)
+        ArtifactStore(store).register("r_y", "t1", f, "result")
+        store.close()
+        with pytest.raises(typer.Exit) as ei:
+            verify_cmd.verify("r_x", "r_y", json_output=False)
+        assert ei.value.exit_code == 1
+
+    def test_unknown_run_exit_2(self, two_runs: Path) -> None:
+        with pytest.raises(typer.Exit) as ei:
+            verify_cmd.verify("r_x", "ghost", json_output=False)
+        assert ei.value.exit_code == 2
+
+
+# -- v0.9: artifacts --get -------------------------------------------------------
+
+
+class TestArtifactsGet:
+    def test_export_verifies_checksums(
+        self,
+        state_db: Path,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        src = tmp_path / "data.bin"
+        src.write_bytes(b"artifact-bytes")
+        store = StateStore(state_db)
+        ArtifactStore(store).register("r_done", "t1", src, "result")
+        store.close()
+
+        dest = tmp_path / "export"
+        artifacts_cmd.artifacts("r_done", get=True, task_id=None, output=str(dest))
+        assert (dest / "data.bin").read_bytes() == b"artifact-bytes"
+        assert "Exported 1 artifact(s)" in capsys.readouterr().out
+
+    def test_corrupted_artifact_exits_1(
+        self, state_db: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        from computepilot.artifacts.store import ArtifactStore
+
+        src = tmp_path / "good.bin"
+        src.write_bytes(b"original")
+        store = StateStore(state_db)
+        ArtifactStore(store).register("r_done", "t1", src, "result")
+        store.close()
+        src.write_bytes(b"TAMPERED")
+
+        with pytest.raises(typer.Exit) as ei:
+            artifacts_cmd.artifacts("r_done", get=True, task_id=None, output=str(tmp_path / "exp2"))
+        assert ei.value.exit_code == 1
+
+    def test_missing_file_warns(
+        self,
+        state_db: Path,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        from computepilot.artifacts.store import ArtifactStore
+
+        src = tmp_path / "gone.bin"
+        src.write_text("x")
+        store = StateStore(state_db)
+        ArtifactStore(store).register("r_done", "t1", src, "result")
+        store.close()
+        src.unlink()
+
+        artifacts_cmd.artifacts("r_done", get=True, task_id=None, output=str(tmp_path / "e3"))
+        assert "missing on disk" in capsys.readouterr().out

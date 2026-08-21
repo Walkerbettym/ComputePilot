@@ -150,7 +150,8 @@ cpilot report <run-id>      # 生成 report.md + manifest.json（可复现）
 | `cpilot logs` | 查看任务事件日志（`--follow` 实时跟踪） |
 | `cpilot resume` | 从检查点恢复 |
 | `cpilot cancel` | 取消运行 |
-| `cpilot artifacts` | 列出制品 |
+| `cpilot artifacts` | 列出/导出制品（`--get` 校验 sha256） |
+| `cpilot verify` | 对比两次运行的可复现性 |
 | `cpilot report` | 生成溯源报告 |
 | `cpilot skill` | 管理技能注册表 |
 | `cpilot sessions` | 查看/清理已保存的交互会话 |
@@ -175,6 +176,20 @@ pytest tests/unit/ tests/integration/ tests/e2e/ --cov=computepilot
 ```
 
 CI 每次 push 自动运行上述全部检查（含 coverage ≥ 90%，当前 93%）。
+
+---
+
+## Python API
+
+```python
+from computepilot import api
+
+run = api.run("workflow.yaml", params={"epochs": 50})   # 阻塞至完成
+print(run.id, run.status)
+api.verify("run_a", "run_b")     # {"reproducible": true/false, ...}
+```
+
+支持 `run / resume / status / list_runs / artifacts / report / cancel / verify`。
 
 ---
 

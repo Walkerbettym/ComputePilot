@@ -34,7 +34,7 @@ def test_artifact_store_register(tmp_path: Path) -> None:
         artifact_type="text/csv",
     )
 
-    assert meta["id"] == meta["checksum"][:16]
+    assert meta["id"] != meta["checksum"][:16]  # id is row-unique, not content address
     assert meta["size"] == artifact_file.stat().st_size
     assert meta["path"] == str(artifact_file)
 
