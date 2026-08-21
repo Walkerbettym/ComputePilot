@@ -1,4 +1,5 @@
 """Tests for WorkspaceManager."""
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -27,6 +28,7 @@ class TestWorkspaceManager:
         mgr = WorkspaceManager()
         mgr.create("dup", str(tmp_path / "ws"))
         import pytest
+
         with pytest.raises(ValueError, match="already exists"):
             mgr.create("dup", str(tmp_path / "ws2"))
 

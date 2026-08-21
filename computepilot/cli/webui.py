@@ -128,17 +128,28 @@ async def run_detail(run_id: str) -> HTMLResponse:
     body += f"<h2>Run <code>{run_id[:28]}</code></h2><table>"
     for k in ("status", "workflow_name", "executor", "created_at", "started_at", "finished_at"):
         body += f"<tr><th>{k}</th><td>{row[k] or '-'}</td></tr>"
+    cfg_tasks: list[dict[str, object]] = []
     if row["config_json"] and row["config_json"] != "{}":
         from contextlib import suppress
 
         with suppress(json.JSONDecodeError, TypeError):
-            body += f'<tr><th>config</th><td class="w"><code>{json.dumps(json.loads(row["config_json"]), indent=2)}</code></td></tr>'
+            cfg = json.loads(row["config_json"])
+            wf_cfg = cfg.get("workflow") if isinstance(cfg, dict) else None
+            if isinstance(wf_cfg, dict):
+                raw_tasks = wf_cfg.get("tasks")
+                if isinstance(raw_tasks, list):
+                    cfg_tasks = [t for t in raw_tasks if isinstance(t, dict)]
     body += "</table>"
 
     tasks = conn.execute(
         "SELECT task_id,status,exit_code,error FROM task_states WHERE run_id=?", (run_id,)
     ).fetchall()
     conn.close()
+    if cfg_tasks:
+        status_by_task = {t["task_id"]: t["status"] for t in tasks}
+        svg = _dag_svg(cfg_tasks, status_by_task)
+        if svg:
+            body += f"<h3>DAG</h3>{svg}"
     if tasks:
         done = sum(1 for t in tasks if t["status"] in ("succeeded", "failed", "skipped"))
         pct = round(done / len(tasks) * 100, 1) if tasks else 0
@@ -156,6 +167,114 @@ async def run_detail(run_id: str) -> HTMLResponse:
         body += "</table>"
     body += '<div class="nav"><a href="/">← Back</a></div>'
     return HTMLResponse(content=body)
+
+
+_NODE_W, _NODE_H, _GAP_X, _GAP_Y = 130, 34, 46, 16
+
+_STATUS_FILL = {
+    "succeeded": "#12351f",
+    "failed": "#3d1418",
+    "running": "#1c2f4a",
+    "skipped": "#2a2f36",
+}
+
+
+def dag_svg(cfg_tasks: list[dict[str, object]]) -> str | None:
+    """Render a layered left-to-right SVG dependency graph (no external deps)."""
+    return _dag_svg(cfg_tasks, {})
+
+
+def _dag_svg(cfg_tasks: list[dict[str, object]], status_by_task: dict[str, object]) -> str | None:
+    """Layered SVG from [{id, depends_on}] task dicts; None when empty/oversized."""
+    ids = [str(t["id"]) for t in cfg_tasks if t.get("id")]
+    if not ids or len(ids) > 200:
+        return None
+    idset = set(ids)
+    deps: dict[str, list[str]] = {}
+    for t in cfg_tasks:
+        tid = t.get("id")
+        if not tid:
+            continue
+        raw = t.get("depends_on")
+        plist = [str(d) for d in raw if d in idset] if isinstance(raw, list) else []
+        deps[str(tid)] = plist
+
+    # Kahn layering: layer[n] = 1 + max(layer[p] for p in deps)
+    indeg = {i: len(deps[i]) for i in ids}
+    layer = {i: 0 for i in ids}
+    queue = [i for i in ids if indeg[i] == 0]
+    seen = 0
+    while queue:
+        nxt: list[str] = []
+        for nid in queue:
+            seen += 1
+            for cid, plist in deps.items():
+                if nid in plist and cid in indeg:
+                    indeg[cid] -= 1
+                    layer[cid] = max(layer[cid], layer[nid] + 1)
+                    if indeg[cid] == 0:
+                        nxt.append(cid)
+        queue = nxt
+    if seen != len(ids):  # cycle — skip rendering
+        return None
+
+    columns: dict[int, list[str]] = {}
+    for i in ids:
+        columns.setdefault(layer[i], []).append(i)
+
+    def node_xy(nid: str) -> tuple[float, float]:
+        col = columns[layer[nid]]
+        row = col.index(nid)
+        x = layer[nid] * (_NODE_W + _GAP_X)
+        y = row * (_NODE_H + _GAP_Y)
+        return x + 10, y + 10
+
+    width = (max(columns) + 1) * (_NODE_W + _GAP_X)
+    height = max(len(c) for c in columns.values()) * (_NODE_H + _GAP_Y) + 20
+    parts = [
+        f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {width} {height}" '
+        f'style="max-width:{width}px;background:#0d1117;border:1px solid #30363d;'
+        f'border-radius:8px;margin:12px 0">',
+        '<defs><marker id="arw" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto">'
+        '<path d="M0,0 L6,3 L0,6 Z" fill="#58a6ff"/></marker></defs>',
+    ]
+    from html import escape as e
+
+    for t in cfg_tasks:
+        for d in deps[str(t["id"])]:
+            x1, y1 = node_xy(d)
+            x2, y2 = node_xy(str(t["id"]))
+            parts.append(
+                f'<path d="M{x1 + _NODE_W},{y1 + _NODE_H // 2} '
+                f"C{x1 + _NODE_W + _GAP_X // 2},{y1 + _NODE_H // 2} "
+                f'{x2 - _GAP_X // 2},{y2 + _NODE_H // 2} {x2},{y2 + _NODE_H // 2}" '
+                'stroke="#58a6ff" stroke-width="1.2" fill="none" marker-end="url(#arw)" '
+                'opacity="0.55"/>'
+            )
+    for tid in ids:
+        x, y = node_xy(tid)
+        st = status_by_task.get(tid)
+        fill = _STATUS_FILL.get(str(st), "#161b22")
+        stroke = (
+            "#3fb950"
+            if st == "succeeded"
+            else "#f85149"
+            if st == "failed"
+            else "#d2a8ff"
+            if st == "running"
+            else "#30363d"
+        )
+        parts.append(
+            f'<rect x="{x}" y="{y}" width="{_NODE_W}" height="{_NODE_H}" rx="6" '
+            f'fill="{fill}" stroke="{stroke}" stroke-width="1.2"/>'
+        )
+        label = e(tid[:18])
+        parts.append(
+            f'<text x="{x + _NODE_W / 2}" y="{y + _NODE_H / 2 + 4}" text-anchor="middle" '
+            f'font-family="sans-serif" font-size="11.5" fill="#c9d1d9">{label}</text>'
+        )
+    parts.append("</svg>")
+    return "".join(parts)
 
 
 def main() -> None:

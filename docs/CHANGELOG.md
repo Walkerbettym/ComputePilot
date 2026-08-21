@@ -1,5 +1,32 @@
 # Changelog
 
+## v0.5.0 (2026-08-21)
+
+从"生产可用"到"规模与领域生态"。
+
+### 新功能
+
+- **`cpilot dag`** — 任务依赖图可视化：ascii 树（终端）/ mermaid（Markdown 可嵌入）/ json（机器可读）；环检测报错
+- **HPC 领域 Skill ×3（NG-5 兑现）**
+  - `openfoam` — 求解器/湍流模型/网格词汇表，发散自动降时间步，Reynolds 参数约束
+  - `gromacs` — 力场/系综/溶剂词汇表，温度/步长约束，GPU 资源默认
+  - `lammps` — 势函数/系综/材料词汇表，原子数/应变率约束，LOST_ATOMS 自愈动作
+  - Conductor 自动路由领域查询（如 "sst turbulence" → openfoam）
+- **`cpilot logs --follow`** — tail -f 式实时事件跟踪，支持 `--task` 过滤组合
+- **Dashboard DAG 视图** — 运行详情页内嵌分层 SVG 依赖图（零外部依赖），节点按任务状态着色；引擎持久化 workflow 结构到 config_json
+
+### 工具
+
+- **`scripts/slurm_smoke.sh`** — 真实集群冒烟测试（sbatch/sacct/scancel 全链路，独立于 CI）
+
+### 修复
+
+- **CLI 入口在 Python 3.14 完全不可用** — typer 0.27 不再支持 `app.command()(sub_typer)` 嵌套写法，改用 `add_typer`；此前 `cpilot --help` 即崩溃
+
+### 性能
+
+- 新增 1000-task 调度基准：宽图 < 1s、链式 ready_tasks ×1000 < 2s（全部通过）
+
 ## v0.4.0 (2026-08-21)
 
 从"能跑真实用例"到"生产可用" — 稳定性、CLI 全链路集成、监控生态。

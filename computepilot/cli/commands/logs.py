@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import sqlite3
 from pathlib import Path
+from typing import Any
 
 import typer
 
@@ -25,8 +26,11 @@ def logs(
     run_id: str = typer.Argument(..., help="Run ID", metavar="RUN_ID"),
     task_id: str | None = typer.Option(None, "--task", "-t", help="Filter by task ID"),
     tail: int = typer.Option(50, "--tail", "-n", help="Number of lines to show"),
+    follow: bool = typer.Option(
+        False, "--follow", "-F", help="Keep the stream open and print new events as they arrive"
+    ),
 ) -> None:
-    """Show task event logs for a run."""
+    """Show task event logs for a run (optionally follow new events)."""
     conn = _get_db()
 
     # Verify run exists
@@ -36,18 +40,50 @@ def logs(
         raise typer.Exit(1)
 
     rows = conn.execute(
-        "SELECT task_id, event, at, payload FROM task_events WHERE run_id = ? ORDER BY id ASC",
+        "SELECT id, task_id, event, at, payload FROM task_events WHERE run_id = ? ORDER BY id ASC",
         (run_id,),
     ).fetchall()
 
-    events = []
-    for r in rows:
-        entry = {"task_id": r["task_id"], "event": r["event"], "at": r["at"]}
-        if r["payload"]:
-            try:
-                entry["payload"] = json.loads(r["payload"])
-            except (json.JSONDecodeError, TypeError):
-                entry["payload"] = r["payload"]
-        events.append(entry)
-
+    events = [_row_to_event(r) for r in rows]
     print_task_logs(events, task_id=task_id, tail=tail)
+
+    if not follow:
+        return
+
+    console.print("[cyan]▶ Following new events (Ctrl-C to stop)[/cyan]")
+    last_id = max((r["id"] for r in rows), default=0)
+    try:
+        import time
+
+        while True:
+            time.sleep(1)
+            fresh = conn.execute(
+                "SELECT id, task_id, event, at, payload FROM task_events "
+                "WHERE run_id = ? AND id > ? ORDER BY id ASC",
+                (run_id, last_id),
+            ).fetchall()
+            for r in fresh:
+                entry = _row_to_event(r)
+                at = entry.get("at", "")[:19]
+                tid = entry.get("task_id", "-")
+                event = entry.get("event", "-")
+                if task_id is not None and tid != task_id:
+                    continue
+                console.print(f"  [dim]{at}[/dim] [bold]{tid}[/bold] {event}")
+            if fresh:
+                last_id = max(last_id, max(r["id"] for r in fresh))
+    except KeyboardInterrupt:
+        conn.close()
+        console.print()
+        console.print("[yellow]Follow stopped by user[/yellow]")
+
+
+def _row_to_event(r: sqlite3.Row) -> dict[str, Any]:
+    """Convert a task_events row into a log-entry dict."""
+    entry: dict[str, object] = {"task_id": r["task_id"], "event": r["event"], "at": r["at"]}
+    if r["payload"]:
+        try:
+            entry["payload"] = json.loads(r["payload"])
+        except (json.JSONDecodeError, TypeError):
+            entry["payload"] = r["payload"]
+    return entry

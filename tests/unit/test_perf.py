@@ -77,3 +77,39 @@ async def test_100_task_engine_throughput(tmp_path: Path) -> None:
 
     assert run.status == RunStatus.SUCCEEDED
     assert elapsed < 10.0, f"100 tasks took {elapsed:.2f}s (limit 10s)"
+
+
+@pytest.mark.perf
+def test_1000_task_scheduling_overhead() -> None:
+    """1000-task wide DAG scheduling should stay under 1s (v0.5-NFR)."""
+    tasks = [Task(id=f"n{i:04d}", command="echo") for i in range(1000)]
+    wf = Workflow(name="perf-sched-1k", tasks=tasks)
+
+    start = time.perf_counter()
+    dag = build_dag(wf)
+    order = dag.topological_order()
+    sched = Scheduler(dag, max_concurrency=32)
+    elapsed = time.perf_counter() - start
+
+    assert len(order) == 1000
+    assert sched.has_pending()
+    assert elapsed < 1.0, f"Scheduling 1000 tasks took {elapsed * 1000:.1f}ms (limit 1s)"
+
+
+@pytest.mark.perf
+def test_1000_task_chain_ready_tasks() -> None:
+    """Ready-task computation across a 1000-task chain stays under 2s."""
+    tasks = [
+        Task(id=f"c{i:04d}", command="echo", depends_on=[f"c{i - 1:04d}"] if i > 0 else [])
+        for i in range(1000)
+    ]
+    dag = build_dag(Workflow(name="perf-chain-1k", tasks=tasks))
+
+    start = time.perf_counter()
+    completed: set[str] = set()
+    for i in range(1000):
+        dag.ready_tasks(completed)
+        completed.add(f"c{i:04d}")
+    elapsed = time.perf_counter() - start
+
+    assert elapsed < 2.0, f"Chain ready_tasks x1000 took {elapsed:.2f}s (limit 2s)"

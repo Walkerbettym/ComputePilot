@@ -88,8 +88,11 @@ class SkillRegistry:
         self._skills[skill.name] = skill
 
     def register_builtins(self) -> None:
-        """Register all built-in skills (v0.2: includes population_genetics)."""
+        """Register all built-in skills (v0.5: adds HPC domain skills)."""
         from computepilot.skills.docker import docker_skill
+        from computepilot.skills.gromacs import gromacs_skill
+        from computepilot.skills.lammps import lammps_skill
+        from computepilot.skills.openfoam import openfoam_skill
         from computepilot.skills.population_genetics import population_genetics_skill
         from computepilot.skills.python import python_skill
         from computepilot.skills.shell import shell_skill
@@ -101,6 +104,9 @@ class SkillRegistry:
             slurm_skill,
             docker_skill,
             population_genetics_skill,
+            openfoam_skill,
+            gromacs_skill,
+            lammps_skill,
         ):
             self.register(skill)
 

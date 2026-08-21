@@ -7,6 +7,7 @@ import typer
 from computepilot.cli.commands import (
     artifacts,
     cancel,
+    dag,
     init,
     logs,
     plan,
@@ -26,13 +27,14 @@ app = typer.Typer(
 
 app.command(name="init")(init.init)
 app.command(name="validate")(validate.validate_workflow)
+app.command(name="dag")(dag.render_dag)
 app.command(name="run")(run.run)
 app.command(name="status")(status.status)
 app.command(name="logs")(logs.logs)
 app.command(name="plan")(plan.plan)
 app.command(name="artifacts")(artifacts.artifacts)
 app.command(name="report")(report.report)
-app.command(name="skill")(skill.skill_app)
+app.add_typer(skill.skill_app, name="skill")
 app.command(name="resume")(resume.resume)
 app.command(name="cancel")(cancel.cancel)
 

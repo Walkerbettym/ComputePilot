@@ -81,7 +81,9 @@ runtime/  →  agent/    ❌ 禁止（check_deps.py 强制执行）
 
 ### `skills/` — 技能系统
 
-python（运行脚本/Notebook）、shell（管道/环境）、docker（容器编排）、slurm（HPC 作业）
+通用：python（运行脚本/Notebook）、shell（管道/环境）、docker（容器编排）、slurm（HPC 作业）
+
+领域（v0.5）：population_genetics（1000 Genomes）、openfoam（CFD）、gromacs（分子动力学）、lammps（材料原子尺度）
 
 ### `policy/` — 策略引擎
 
@@ -97,7 +99,8 @@ ArtifactStore（注册/查询/校验和）、ProvenanceBuilder（manifest.json �
 cpilot
 ├── init       创建项目骨架
 ├── validate   校验 workflow（24 条规则）
-├── run        执行（Local/Docker/Slurm）
+├── dag        可视化依赖图（ascii/mermaid/json）
+├── run        执行（Local/Docker/Slurm/K8s；--interactive / --from-session）
 ├── plan       自然语言→工作流（需 LLM）
 ├── status     查看运行状态
 ├── logs       查看事件日志

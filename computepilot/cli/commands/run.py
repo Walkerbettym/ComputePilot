@@ -186,7 +186,27 @@ def _execute_workflow(wf: Workflow, executor: str, max_concurrency: int) -> None
     engine = Engine(state=store, executor=exe, max_concurrency=max_concurrency)
 
     try:
-        result = asyncio.run(engine.run(workflow=wf, run_id=run_id, run_dir=str(run_dir), env={}))
+        result = asyncio.run(
+            engine.run(
+                workflow=wf,
+                run_id=run_id,
+                run_dir=str(run_dir),
+                env={},
+                config={
+                    "total_tasks": len(wf.tasks),
+                    "workflow": {
+                        "tasks": [
+                            {
+                                "id": t.id,
+                                "type": t.type.value,
+                                "depends_on": t.depends_on,
+                            }
+                            for t in wf.tasks
+                        ]
+                    },
+                },
+            )
+        )
     except Exception as exc:
         console.print(f"[red]✗ Run failed: {exc}[/red]")
         raise typer.Exit(1) from exc

@@ -191,24 +191,24 @@ class TestCancelCmd:
 
 class TestLogsCmd:
     def test_show_events(self, state_db: Path, capsys: pytest.CaptureFixture[str]) -> None:
-        logs_cmd.logs("r_running", task_id=None, tail=50)
+        logs_cmd.logs("r_running", task_id=None, tail=50, follow=False)
         out = capsys.readouterr().out
         assert "t1" in out and "t2" in out
 
     def test_filter_by_task(self, state_db: Path, capsys: pytest.CaptureFixture[str]) -> None:
-        logs_cmd.logs("r_running", task_id="t2", tail=50)
+        logs_cmd.logs("r_running", task_id="t2", tail=50, follow=False)
         out = capsys.readouterr().out
         assert "t2" in out
         assert "t1" not in out
 
     def test_tail_limits_rows(self, state_db: Path, capsys: pytest.CaptureFixture[str]) -> None:
-        logs_cmd.logs("r_running", task_id=None, tail=1)
+        logs_cmd.logs("r_running", task_id=None, tail=1, follow=False)
         out = capsys.readouterr().out
         assert "t1" not in out and "t2" in out
 
     def test_unknown_run(self, state_db: Path) -> None:
         with pytest.raises(typer.Exit) as ei:
-            logs_cmd.logs("nope", task_id=None, tail=50)
+            logs_cmd.logs("nope", task_id=None, tail=50, follow=False)
         assert ei.value.exit_code == 1
 
     def test_bad_payload_json(self, state_db: Path) -> None:
@@ -220,11 +220,11 @@ class TestLogsCmd:
         )
         conn.commit()
         conn.close()
-        logs_cmd.logs("r_running", task_id=None, tail=50)
+        logs_cmd.logs("r_running", task_id=None, tail=50, follow=False)
 
     def test_no_db(self, fake_home: Path) -> None:
         with pytest.raises(typer.Exit) as ei:
-            logs_cmd.logs("whatever", task_id=None, tail=50)
+            logs_cmd.logs("whatever", task_id=None, tail=50, follow=False)
         assert ei.value.exit_code == 0
 
 
@@ -428,7 +428,11 @@ class TestWebUI:
         store.create_run(_make_run("r_web"))
         store.transition_task("r_web", "t1", TaskStatus.SUCCEEDED, exit_code=0)
         conn = sqlite3.connect(str(webui_db))
-        conn.execute("UPDATE runs SET config_json='{\"k\": 1}' WHERE id='r_web'")
+        conn.execute(
+            'UPDATE runs SET config_json=\'{"total_tasks": 1, '
+            '"workflow": {"tasks": [{"id": "t1", "type": "shell", "depends_on": []}]}}\' '
+            "WHERE id='r_web'"
+        )
         conn.commit()
         conn.close()
         store.close()
@@ -437,7 +441,16 @@ class TestWebUI:
         resp = client.get("/run/r_web")
         assert resp.status_code == 200
         assert "t1" in resp.text
-        assert "config" in resp.text
+        assert "<svg" in resp.text
+
+    def test_dag_svg_cycle_returns_none(self) -> None:
+        from computepilot.cli.webui import dag_svg
+
+        cyclic = [
+            {"id": "a", "depends_on": ["b"]},
+            {"id": "b", "depends_on": ["a"]},
+        ]
+        assert dag_svg(cyclic) is None
 
     def test_run_detail_bad_config(self, webui_db: Path) -> None:
         from fastapi.testclient import TestClient
