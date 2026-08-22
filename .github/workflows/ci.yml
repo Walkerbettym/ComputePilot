@@ -51,6 +51,9 @@ jobs:
       - name: Dependency direction check (runtime → agent)
         run: python scripts/check_deps.py
 
+      - name: Performance benchmarks
+        run: pytest tests/unit/test_perf.py -m perf -q --no-cov
+
       - name: Unit + Integration tests
         run: >
           pytest tests/unit/ tests/integration/

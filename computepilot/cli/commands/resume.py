@@ -21,6 +21,9 @@ def resume(
     ),
     executor: str = typer.Option("local", "--executor", "-e", help="Executor backend"),
     max_concurrency: int = typer.Option(4, "--max-concurrency", "-j", help="Max concurrent tasks"),
+    retry_failed: bool = typer.Option(
+        False, "--retry-failed", help="Re-execute tasks that previously FAILED"
+    ),
 ) -> None:
     """Resume a previously-started run, skipping completed tasks."""
     # Open the state store
@@ -33,6 +36,15 @@ def resume(
     if run_data is None:
         console.print(f"[red]❌ Run '{run_id}' not found[/red]")
         raise typer.Exit(1)
+
+    if retry_failed:
+        retried = store.reset_failed_tasks(run_id)
+        if retried:
+            console.print(
+                f"[cyan]↻ Re-queuing {len(retried)} failed task(s): {', '.join(retried)}[/cyan]"
+            )
+        else:
+            console.print("[dim]No failed tasks to re-queue.[/dim]")
 
     # Determine the workflow path
     if workflow_path:

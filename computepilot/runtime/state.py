@@ -210,6 +210,32 @@ class StateStore:
         ).fetchall()
         return {r["task_id"] for r in rows}
 
+    def count_failed_tasks(self, run_id: str) -> int:
+        """Number of FAILED tasks recorded for a run."""
+        row = self._conn.execute(
+            "SELECT COUNT(*) AS c FROM task_states WHERE run_id=? AND status=?",
+            (run_id, TaskStatus.FAILED.value),
+        ).fetchone()
+        return int(row["c"]) if row else 0
+
+    def reset_failed_tasks(self, run_id: str) -> list[str]:
+        """Remove FAILED task states so a resume re-executes them.
+
+        Returns the reset task ids. Events are kept for audit purposes.
+        """
+        rows = self._conn.execute(
+            "SELECT task_id FROM task_states WHERE run_id=? AND status=?",
+            (run_id, TaskStatus.FAILED.value),
+        ).fetchall()
+        ids = [r["task_id"] for r in rows]
+        if ids:
+            self._conn.execute(
+                "DELETE FROM task_states WHERE run_id=? AND status=?",
+                (run_id, TaskStatus.FAILED.value),
+            )
+            self._conn.commit()
+        return ids
+
     def get_task_details(self, run_id: str, task_id: str) -> dict[str, Any] | None:
         """Return full details for a specific task in a run."""
         row = self._conn.execute(

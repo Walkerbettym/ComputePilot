@@ -289,6 +289,9 @@ class Engine:
 
             if human_intervention:
                 run.status = RunStatus.FAILED
+            elif self._state.count_failed_tasks(run.id):
+                # Skipped-over failures must not masquerade as success.
+                run.status = RunStatus.FAILED
             else:
                 run.status = RunStatus.SUCCEEDED
         except (Exception, asyncio.CancelledError) as exc:

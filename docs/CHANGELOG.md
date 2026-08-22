@@ -1,5 +1,27 @@
 # Changelog
 
+## v1.2.0 (2026-08-22)
+
+故障恢复闭环 — 让"可恢复"语义严格、失败任务可控重试。
+
+### 修复
+
+- **resume 不再把带失败的运行标成成功** — 此前 resume 跳过 FAILED 任务后
+  运行终态判为 SUCCEEDED（假成功）；现在只要存在 FAILED 任务，
+  终态如实为 FAILED
+
+### 新功能
+
+- **`cpilot resume --retry-failed`** — 将 FAILED 任务重新入队后续跑；
+  CLI 与 `api.resume(retry_failed=True)` 同步支持；
+  `StateStore.reset_failed_tasks()` 删除失败状态行（事件保留供审计）
+- **`cpilot validate --json`** — 结构化校验报告（passed + issues[code/level/message/location]），
+  便于 CI 集成
+
+### 工程
+
+- CI 新增性能基准步骤（`pytest -m perf`，1000 任务调度 <1s 门禁）
+
 ## v1.1.0 (2026-08-22)
 
 表达力与韧性 — 原生参数扫描、优雅中断。

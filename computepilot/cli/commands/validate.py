@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 import typer
@@ -17,6 +18,7 @@ def validate_workflow(
     set_param: list[str] | None = typer.Option(
         None, "--set", help="Set workflow parameter before validating, e.g. --set epochs=50"
     ),
+    json_output: bool = typer.Option(False, "--json", help="Machine-readable report"),
 ) -> None:
     """Validate a workflow YAML file."""
     path = Path(workflow_path)
@@ -38,7 +40,24 @@ def validate_workflow(
         raise typer.Exit(2) from exc
 
     report = validate(wf)
-    print_validation_report(report, workflow_path)
+
+    if json_output:
+        payload = {
+            "workflow": str(path),
+            "passed": report.passed,
+            "issues": [
+                {
+                    "code": e.code,
+                    "level": e.level,
+                    "message": e.message,
+                    **({"location": e.location} if e.location else {}),
+                }
+                for e in report.errors
+            ],
+        }
+        console.print(json.dumps(payload, indent=2), markup=False)
+    else:
+        print_validation_report(report, workflow_path)
 
     if not report.passed:
         raise typer.Exit(1)

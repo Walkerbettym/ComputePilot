@@ -113,8 +113,8 @@ cpilot plan "Run a parameter sweep from 1 to 100 with 10 points, use 8 CPUs"
 如果运行中途被杀，可以恢复：
 
 ```bash
-cpilot resume <run-id>
-# 从最后一个成功任务继续，不丢已完成、不重复执行
+cpilot resume <run-id>                # 从最后一个成功任务继续
+cpilot resume <run-id> --retry-failed # 把失败任务重新入队再续跑
 ```
 
 ### 6. 产物与溯源报告

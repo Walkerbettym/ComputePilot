@@ -103,10 +103,17 @@ def resume(
     *,
     max_concurrency: int = 4,
     state_dir: str | Path | None = None,
+    retry_failed: bool = False,
 ) -> Run:
-    """Resume a previously-started run, skipping completed tasks."""
+    """Resume a previously-started run, skipping completed tasks.
+
+    With ``retry_failed=True`` tasks that FAILED earlier are re-queued
+    before resuming.
+    """
     wf = load_workflow(workflow_path)
     store = _store(state_dir)
+    if retry_failed:
+        store.reset_failed_tasks(run_id)
     engine = Engine(state=store, executor=LocalExecutor(), max_concurrency=max_concurrency)
     result = asyncio.run(
         engine.resume(workflow=wf, run_id=run_id, run_dir=Path(workflow_path).parent, env={})

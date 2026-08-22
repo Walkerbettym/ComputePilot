@@ -101,7 +101,7 @@ class TestValidateCmd:
     def test_valid_workflow(self, tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
         wf = tmp_path / "workflow.yaml"
         wf.write_text(HELLO_YAML)
-        validate_cmd.validate_workflow(str(wf), set_param=None)
+        validate_cmd.validate_workflow(str(wf), set_param=None, json_output=False)
         assert "validation passed" in capsys.readouterr().out
 
     def test_missing_file(self) -> None:
@@ -113,14 +113,14 @@ class TestValidateCmd:
         wf = tmp_path / "broken.yaml"
         wf.write_text(":::: not yaml ::::")
         with pytest.raises(typer.Exit) as ei:
-            validate_cmd.validate_workflow(str(wf), set_param=None)
+            validate_cmd.validate_workflow(str(wf), set_param=None, json_output=False)
         assert ei.value.exit_code == 2
 
     def test_failed_validation(self, tmp_path: Path) -> None:
         wf = tmp_path / "cycle.yaml"
         wf.write_text(CYCLE_YAML)
         with pytest.raises(typer.Exit) as ei:
-            validate_cmd.validate_workflow(str(wf), set_param=None)
+            validate_cmd.validate_workflow(str(wf), set_param=None, json_output=False)
         assert ei.value.exit_code == 1
 
 
@@ -1076,7 +1076,7 @@ class TestRunWithParams:
         wf = tmp_path / "wf.yaml"
         wf.write_text("name: p\ntasks:\n  - id: a\n    command: echo ${needme}\n    type: shell\n")
         with pytest.raises(typer.Exit) as ei:
-            validate_cmd.validate_workflow(str(wf), set_param=None)
+            validate_cmd.validate_workflow(str(wf), set_param=None, json_output=False)
         assert ei.value.exit_code == 2
         assert "needme" in capsys.readouterr().out
 
