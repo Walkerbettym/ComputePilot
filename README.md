@@ -1,5 +1,7 @@
 # ComputePilot
 
+> **v1.0** — 自本版本起遵循语义化版本，公开面见 [docs/api-stability.md](docs/api-stability.md)
+
 > **面向科学计算的开源 Agentic Workflow Runtime — 让科研人员通过自然语言生成可验证、可执行、可恢复、可复现的计算工作流。**
 
 **Agent + Workflow + Reproducibility**

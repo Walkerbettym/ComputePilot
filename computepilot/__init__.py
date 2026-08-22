@@ -3,7 +3,6 @@
 from computepilot import api
 from computepilot.models import Workflow
 
-__all__ = ["Workflow", "api"]
+__version__ = "1.0.0"
 
-__all__ = ["Workflow"]
-__version__ = "0.1.0"
+__all__ = ["Workflow", "api", "__version__"]

@@ -1,5 +1,23 @@
 # Changelog
 
+## v1.0.0 (2026-08-22)
+
+组合与稳定化 — 首个稳定版发布。
+
+### 新功能
+
+- **工作流 include 组合** — `includes:` 递归内联子工作流（相对各自文件定位）；
+  循环 include 与合并后任务 id 冲突均明确报错；合并先于参数替换与校验
+- **`cpilot dag --run <run_id>`** — 渲染运行持久化的依赖图：ascii 标注任务状态
+  （✓/✗/▶）、svg 按状态着色、json 含状态表；旧格式运行给出升级提示
+- **`computepilot.__version__`** 导出；pyproject 补齐 classifiers/keywords/readme/license
+
+### 发布工程
+
+- **API 稳定承诺** docs/api-stability.md：CLI 命令与退出码、Python API 签名、
+  YAML schema、持久化格式、Web 路由自 1.0 起受语义化版本保护
+- **e2e Demo 5** — include 组合 + 参数化 + 双次运行 + verify 可复现判定全链路
+
 ## v0.9.0 (2026-08-21)
 
 复现性闭环与编程接口 — 让"可复现"可验证、让引擎可被 Python 直接调用。
