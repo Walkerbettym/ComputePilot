@@ -8,7 +8,7 @@ import sqlite3
 from datetime import UTC, datetime
 from pathlib import Path
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Response
 from fastapi.responses import HTMLResponse, JSONResponse
 
 from computepilot.cli.svgdag import render_svg
@@ -225,6 +225,42 @@ async def run_live(run_id: str) -> HTMLResponse:
         "poll();</script>"
     )
     return HTMLResponse(content=body)
+
+
+@app.get("/metrics")
+async def metrics() -> Response:
+    """Prometheus text exposition: run/task/artifact counters by status."""
+    lines: list[str] = [
+        "# HELP computepilot_runs_total Total workflow runs by status.",
+        "# TYPE computepilot_runs_total counter",
+        "# HELP computepilot_tasks_total Total task states by status.",
+        "# TYPE computepilot_tasks_total counter",
+        "# HELP computepilot_artifacts_total Total registered artifacts.",
+        "# TYPE computepilot_artifacts_total counter",
+    ]
+    runs_by_status: dict[str, int] = {}
+    tasks_by_status: dict[str, int] = {}
+    artifacts_total = 0
+    if STATE_DB.exists():
+        conn = _db()
+        for r in conn.execute("SELECT status, COUNT(*) c FROM runs GROUP BY status"):
+            runs_by_status[r["status"]] = r["c"]
+        for r in conn.execute("SELECT status, COUNT(*) c FROM task_states GROUP BY status"):
+            tasks_by_status[r["status"]] = r["c"]
+        row = conn.execute("SELECT COUNT(*) c FROM artifacts").fetchone()
+        artifacts_total = row["c"]
+        conn.close()
+
+    for status, count in sorted(runs_by_status.items()):
+        lines.append(f'computepilot_runs_total{{status="{status}"}} {count}')
+    if not runs_by_status:
+        lines.append('computepilot_runs_total{status="none"} 0')
+    for status, count in sorted(tasks_by_status.items()):
+        lines.append(f'computepilot_tasks_total{{status="{status}"}} {count}')
+    if not tasks_by_status:
+        lines.append('computepilot_tasks_total{status="none"} 0')
+    lines.append(f"computepilot_artifacts_total {artifacts_total}")
+    return Response(content="\n".join(lines) + "\n", media_type="text/plain; version=0.0.4")
 
 
 # -- JSON API (scripting / external tooling) -----------------------------------

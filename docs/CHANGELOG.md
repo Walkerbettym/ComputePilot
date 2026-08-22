@@ -1,5 +1,24 @@
 # Changelog
 
+## v1.3.0 (2026-08-22)
+
+调度与运维 — 任务优先级、Prometheus 指标、模板脚手架。
+
+### 新功能
+
+- **任务优先级** — `Task.priority`（默认 0，向后兼容）；并发槽位竞争时按
+  `(-priority, 拓扑序)` 调度；`cpilot dag --format json` 输出该字段
+- **`/metrics` Prometheus 端点** — runs/tasks 按状态计数、artifacts 总量，
+  文本 exposition 格式，无数据库时输出零值
+- **`cpilot init --template`** — 内置 hello_world / parameter_sweep(foreach+priority) /
+  ml_pipeline / docker_worker 四模板（内嵌代码，pip 安装可用）
+- **`cpilot status --json`** — 运行列表/详情结构化输出（与 /api/run/{id} 同构）
+
+### 修复
+
+- **rich 折行破坏机器可读输出** — 窄终端下 rich 会把长 JSON 行折断导致解析失败；
+  新增 `print_text()` 原样输出，status/logs/validate/verify/artifacts/dag(svg/json) 全部改走该通道
+
 ## v1.2.0 (2026-08-22)
 
 故障恢复闭环 — 让"可恢复"语义严格、失败任务可控重试。

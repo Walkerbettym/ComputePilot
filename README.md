@@ -152,7 +152,7 @@ cpilot report <run-id>      # 生成 report.md + manifest.json（可复现）
 
 | 命令 | 作用 |
 |---|---|
-| `cpilot init` | 初始化工作流项目 |
+| `cpilot init` | 初始化工作流项目（`--template` 内置模板） |
 | `cpilot validate` | 校验 workflow.yaml（24 条规则） |
 | `cpilot dag` | 可视化任务依赖图（ascii/mermaid/json） |
 | `cpilot run` | 执行工作流（Local/Docker/Slurm/K8s；`--set k=v` 参数化） |
@@ -201,6 +201,14 @@ api.verify("run_a", "run_b")  # {"reproducible": true/false, ...}
 ```
 
 支持 `run / resume / status / list_runs / artifacts / report / cancel / verify`。
+
+---
+
+## 可观测性
+
+- **Prometheus 指标** — Dashboard 启动后访问 `/metrics`
+  （runs/tasks 计数器、artifacts 总量，文本 exposition 格式）
+- **JSON 输出** — `status/logs/validate/verify/artifacts` 均支持 `--json`
 
 ---
 

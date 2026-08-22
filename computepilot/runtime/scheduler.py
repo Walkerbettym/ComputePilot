@@ -46,13 +46,19 @@ class Scheduler:
         return len(self._completed) < len(self._dag.topological_order())
 
     def ready(self) -> list[Task]:
-        """Return tasks that are ready to run (deps satisfied + concurrency slot open)."""
+        """Return tasks that are ready to run (deps satisfied + concurrency slot open).
+
+        When slots are contended, higher ``priority`` wins; ties break by
+        topological order (stable).
+        """
         slot_count = self._max_concurrency - len(self._in_flight)
         if slot_count <= 0:
             return []
         candidates = self._dag.ready_tasks(self._completed)
         # Exclude tasks already in-flight
         candidates = [t for t in candidates if t.id not in self._in_flight]
+        topo_index = {tid: i for i, tid in enumerate(self._dag.topological_order())}
+        candidates.sort(key=lambda t: (-t.priority, topo_index.get(t.id, 0)))
         ready = candidates[:slot_count]
         for t in ready:
             self._in_flight.add(t.id)

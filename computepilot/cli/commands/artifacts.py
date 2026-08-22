@@ -10,7 +10,7 @@ from pathlib import Path
 import typer
 
 from computepilot.artifacts.store import ArtifactStore
-from computepilot.cli.ui import console
+from computepilot.cli.ui import console, print_text
 from computepilot.runtime.state import StateStore
 
 
@@ -51,7 +51,7 @@ def artifacts(
         console.print(f"  {art['id'][:12]}  {art['type']:<12}  {art['size']:>8} B  {art['path']}")
 
     # Also output JSON for scripting
-    console.print(json.dumps(rows, indent=2))
+    print_text(json.dumps(rows, indent=2))
 
 
 def _export(rows: list[dict[str, object]], dest: Path) -> None:

@@ -11,6 +11,7 @@ import typer
 from rich.table import Table
 
 from computepilot.cli.ui import console as ui_console
+from computepilot.cli.ui import print_text
 
 console = ui_console
 
@@ -132,7 +133,7 @@ def verify(
             "reproducible": identical,
             "checks": checks,
         }
-        console.print(json.dumps(payload, indent=2), markup=False)
+        print_text(json.dumps(payload, indent=2))
     else:
         table = Table(title=f"Verify: {run_a}  vs  {run_b}")
         table.add_column("Category", style="cyan")

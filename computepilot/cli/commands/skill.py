@@ -8,6 +8,7 @@ import typer
 from rich.console import Console
 from rich.table import Table
 
+from computepilot.cli.ui import print_text
 from computepilot.skills.base import SkillRegistry
 from computepilot.skills.docker import docker_skill
 from computepilot.skills.python import python_skill
@@ -68,7 +69,7 @@ def show_skill(name: str) -> None:
         available = ", ".join(s.name for s in _registry.list_all())
         console.print(f"[dim]Available: {available}[/dim]")
         raise typer.Exit(1)
-    console.print(_yaml.dump(skill.model_dump(mode="json"), sort_keys=False), markup=False)
+    print_text(_yaml.dump(skill.model_dump(mode="json"), sort_keys=False))
 
 
 SKILL_TEMPLATE = """\

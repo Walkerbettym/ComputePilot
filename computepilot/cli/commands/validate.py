@@ -7,7 +7,7 @@ from pathlib import Path
 
 import typer
 
-from computepilot.cli.ui import console, print_validation_report
+from computepilot.cli.ui import console, print_text, print_validation_report
 from computepilot.workflow.params import MissingParameterError, parse_set_args
 from computepilot.workflow.schema import load_workflow
 from computepilot.workflow.validator import validate
@@ -55,7 +55,7 @@ def validate_workflow(
                 for e in report.errors
             ],
         }
-        console.print(json.dumps(payload, indent=2), markup=False)
+        print_text(json.dumps(payload, indent=2))
     else:
         print_validation_report(report, workflow_path)
 

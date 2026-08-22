@@ -13,6 +13,13 @@ from computepilot.workflow.validator import ValidationReport
 console = Console()
 
 
+def print_text(text: str) -> None:
+    """Write raw text (JSON/YAML/SVG/trees) without rich wrapping or markup."""
+    import sys
+
+    sys.stdout.write(text if text.endswith("\n") else text + "\n")
+
+
 def print_validation_report(
     report: ValidationReport,
     workflow_path: str | Path | None = None,

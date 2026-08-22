@@ -10,7 +10,7 @@ from uuid import UUID
 
 import typer
 
-from computepilot.cli.ui import console, print_run_detail
+from computepilot.cli.ui import console, print_run_detail, print_text
 from computepilot.models.run import Run, RunStatus
 
 
@@ -31,9 +31,26 @@ def status(
     live: bool = typer.Option(
         False, "--live", "-l", help="Live progress monitoring with ExecutionSentinel"
     ),
+    json_output: bool = typer.Option(False, "--json", help="Machine-readable output"),
 ) -> None:
     """Show status of a run, or list all runs. Use --live for progress."""
     conn = _get_db()
+
+    if json_output:
+        if run_id is None:
+            rows_out = conn.execute(
+                "SELECT id,status,executor,workflow_name,created_at FROM runs "
+                "ORDER BY created_at DESC"
+            ).fetchall()
+            print_text(json.dumps({"runs": [dict(r) for r in rows_out]}, indent=2))
+        else:
+            try:
+                payload = _run_payload(conn, run_id)
+            except KeyError as exc:
+                console.print(f"[red]❌ {exc.args[0]}[/red]")
+                raise typer.Exit(1) from exc
+            print_text(json.dumps(payload, indent=2))
+        return
 
     if live:
         if run_id is None:
@@ -81,6 +98,47 @@ def status(
     tasks = [dict(r) for r in task_rows]
 
     print_run_detail(run, tasks)
+
+
+def _run_payload(conn: sqlite3.Connection, run_id: str) -> dict[str, object]:
+    """Build the JSON-serializable detail for one run (mirrors /api/run/{id})."""
+    row = conn.execute("SELECT * FROM runs WHERE id = ?", (run_id,)).fetchone()
+    if row is None:
+        raise KeyError(f"run '{run_id}' not found")
+    tasks = [
+        dict(t)
+        for t in conn.execute(
+            "SELECT task_id,status,attempt,exit_code,error FROM task_states WHERE run_id=?",
+            (run_id,),
+        ).fetchall()
+    ]
+    events = [
+        dict(e)
+        for e in conn.execute(
+            "SELECT id,task_id,event,at,payload FROM task_events WHERE run_id=? ORDER BY id",
+            (run_id,),
+        ).fetchall()
+    ]
+    try:
+        cfg = json.loads(row["config_json"]) if row["config_json"] else {}
+    except json.JSONDecodeError:
+        cfg = {}
+    wf_cfg = cfg.get("workflow") if isinstance(cfg, dict) else {}
+    return {
+        "run": {
+            "id": row["id"],
+            "status": row["status"],
+            "workflow_name": row["workflow_name"],
+            "workflow_sha256": row["workflow_sha256"],
+            "executor": row["executor"],
+            "created_at": row["created_at"],
+            "started_at": row["started_at"],
+            "finished_at": row["finished_at"],
+            "config": wf_cfg if isinstance(wf_cfg, dict) else {},
+        },
+        "tasks": tasks,
+        "events": events,
+    }
 
 
 def _live_progress(conn: sqlite3.Connection, run_id: str) -> None:

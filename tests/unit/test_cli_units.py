@@ -130,25 +130,25 @@ class TestValidateCmd:
 class TestStatusCmd:
     def test_no_db(self, fake_home: Path) -> None:
         with pytest.raises(typer.Exit) as ei:
-            status_cmd.status(None, live=False)
+            status_cmd.status(None, live=False, json_output=False)
         assert ei.value.exit_code == 0
 
     def test_list_runs(self, state_db: Path, capsys: pytest.CaptureFixture[str]) -> None:
-        status_cmd.status(None, live=False)
+        status_cmd.status(None, live=False, json_output=False)
         out = capsys.readouterr().out
         assert "Recent runs:" in out
         assert "r_running" in out
         assert "r_done" in out
 
     def test_run_detail(self, state_db: Path, capsys: pytest.CaptureFixture[str]) -> None:
-        status_cmd.status("r_running", live=False)
+        status_cmd.status("r_running", live=False, json_output=False)
         out = capsys.readouterr().out
         assert "r_running" in out
         assert "succeeded" in out or "running" in out
 
     def test_unknown_run(self, state_db: Path) -> None:
         with pytest.raises(typer.Exit) as ei:
-            status_cmd.status("nope", live=False)
+            status_cmd.status("nope", live=False, json_output=False)
         assert ei.value.exit_code == 1
 
     def test_live_requires_id(self, state_db: Path) -> None:
@@ -244,13 +244,13 @@ class TestLogsCmd:
 class TestInitCmd:
     def test_scaffold_new(self, tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
         target = tmp_path / "proj"
-        init_cmd.init(str(target), name=None)
+        init_cmd.init(str(target), name=None, template=None)
         content = (target / "workflow.yaml").read_text()
         assert "my_workflow" in content
 
     def test_with_name(self, tmp_path: Path) -> None:
         target = tmp_path / "proj"
-        init_cmd.init(str(target), name="custom_exp")
+        init_cmd.init(str(target), name="custom_exp", template=None)
         assert "custom_exp" in (target / "workflow.yaml").read_text()
 
     def test_existing_file(self, tmp_path: Path) -> None:

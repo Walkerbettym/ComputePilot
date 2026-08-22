@@ -76,6 +76,7 @@ class Task(BaseModel):
     image: str | None = None
     volumes: list[str] = []
     retry_policy: RetryPolicy = RetryPolicy()
+    priority: int = 0
     timeout: timedelta | None = None
     checkpoint: bool = True
     tags: dict[str, str] = {}

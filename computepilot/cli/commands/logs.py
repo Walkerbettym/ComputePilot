@@ -9,7 +9,7 @@ from typing import Any
 
 import typer
 
-from computepilot.cli.ui import console, print_task_logs
+from computepilot.cli.ui import console, print_task_logs, print_text
 
 
 def _get_db() -> sqlite3.Connection:
@@ -48,7 +48,7 @@ def logs(
 
     if json_output:
         selected = [_row_to_event(r) for r in rows if task_id is None or r["task_id"] == task_id]
-        console.print(json.dumps(selected[-limit:], indent=2, default=str), markup=False)
+        print_text(json.dumps(selected[-limit:], indent=2, default=str))
         return
 
     events = [_row_to_event(r) for r in rows]

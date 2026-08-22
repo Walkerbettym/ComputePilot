@@ -8,7 +8,7 @@ from pathlib import Path
 import typer
 
 from computepilot.cli.svgdag import render_svg
-from computepilot.cli.ui import console
+from computepilot.cli.ui import console, print_text
 from computepilot.models.workflow import Task
 from computepilot.workflow.dag import DAG, build_dag
 from computepilot.workflow.schema import load_workflow
@@ -147,7 +147,7 @@ def render_dag(
             out_path.write_text(text, encoding="utf-8")
             console.print(f"[green]✓ Written to {out_path}[/green]")
         else:
-            console.print(text, markup=False)
+            print_text(text)
         return
 
     if not workflow_path:
@@ -196,7 +196,7 @@ def render_dag(
         out_path.write_text(text, encoding="utf-8")
         console.print(f"[green]✓ Written to {out_path}[/green]")
     else:
-        console.print(text, markup=False)
+        print_text(text)
 
 
 def _task_meta(task: Task) -> str:
@@ -260,6 +260,7 @@ def _to_json(dag: DAG, order: list[str]) -> dict[str, object]:
             {
                 "id": t.id,
                 "type": t.type.value,
+                "priority": t.priority,
                 "cpu": t.resources.cpu,
                 "gpu": t.resources.gpu,
                 "memory": t.resources.memory,
