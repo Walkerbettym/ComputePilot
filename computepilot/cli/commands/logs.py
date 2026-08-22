@@ -29,6 +29,8 @@ def logs(
     follow: bool = typer.Option(
         False, "--follow", "-F", help="Keep the stream open and print new events as they arrive"
     ),
+    json_output: bool = typer.Option(False, "--json", help="Output events as a JSON array"),
+    limit: int = typer.Option(500, "--limit", "-l", help="Max events with --json (from newest)"),
 ) -> None:
     """Show task event logs for a run (optionally follow new events)."""
     conn = _get_db()
@@ -43,6 +45,11 @@ def logs(
         "SELECT id, task_id, event, at, payload FROM task_events WHERE run_id = ? ORDER BY id ASC",
         (run_id,),
     ).fetchall()
+
+    if json_output:
+        selected = [_row_to_event(r) for r in rows if task_id is None or r["task_id"] == task_id]
+        console.print(json.dumps(selected[-limit:], indent=2, default=str), markup=False)
+        return
 
     events = [_row_to_event(r) for r in rows]
     print_task_logs(events, task_id=task_id, tail=tail)

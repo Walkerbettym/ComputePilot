@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import uuid
 from datetime import UTC, datetime
 from pathlib import Path
@@ -220,6 +221,14 @@ def _execute_workflow(wf: Workflow, executor: str, max_concurrency: int) -> None
                 },
             )
         )
+    except KeyboardInterrupt:
+        # Graceful interrupt: persist CANCELLED so the run stays resumable.
+        with contextlib.suppress(Exception):
+            store.update_run_status(run_id, RunStatus.CANCELLED)
+        console.print()
+        console.print(f"[yellow]⏹ Interrupted — run '{run_id}' marked cancelled[/yellow]")
+        console.print(f"[dim]Resume with: cpilot resume {run_id} -w <workflow.yaml>[/dim]")
+        raise typer.Exit(130) from None
     except Exception as exc:
         console.print(f"[red]✗ Run failed: {exc}[/red]")
         raise typer.Exit(1) from exc

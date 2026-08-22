@@ -51,7 +51,7 @@ def test_follow_captures_new_events(
     old = signal.signal(signal.SIGALRM, alarm)
     signal.alarm(5)
     try:
-        logs_cmd.logs("r_follow", task_id=None, tail=50, follow=True)
+        logs_cmd.logs("r_follow", task_id=None, tail=50, follow=True, json_output=False, limit=500)
     except KeyboardInterrupt:
         pass
     finally:

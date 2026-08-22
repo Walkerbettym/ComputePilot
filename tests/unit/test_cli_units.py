@@ -193,24 +193,28 @@ class TestCancelCmd:
 
 class TestLogsCmd:
     def test_show_events(self, state_db: Path, capsys: pytest.CaptureFixture[str]) -> None:
-        logs_cmd.logs("r_running", task_id=None, tail=50, follow=False)
+        logs_cmd.logs(
+            "r_running", task_id=None, tail=50, follow=False, json_output=False, limit=500
+        )
         out = capsys.readouterr().out
         assert "t1" in out and "t2" in out
 
     def test_filter_by_task(self, state_db: Path, capsys: pytest.CaptureFixture[str]) -> None:
-        logs_cmd.logs("r_running", task_id="t2", tail=50, follow=False)
+        logs_cmd.logs(
+            "r_running", task_id="t2", tail=50, follow=False, json_output=False, limit=500
+        )
         out = capsys.readouterr().out
         assert "t2" in out
         assert "t1" not in out
 
     def test_tail_limits_rows(self, state_db: Path, capsys: pytest.CaptureFixture[str]) -> None:
-        logs_cmd.logs("r_running", task_id=None, tail=1, follow=False)
+        logs_cmd.logs("r_running", task_id=None, tail=1, follow=False, json_output=False, limit=500)
         out = capsys.readouterr().out
         assert "t1" not in out and "t2" in out
 
     def test_unknown_run(self, state_db: Path) -> None:
         with pytest.raises(typer.Exit) as ei:
-            logs_cmd.logs("nope", task_id=None, tail=50, follow=False)
+            logs_cmd.logs("nope", task_id=None, tail=50, follow=False, json_output=False, limit=500)
         assert ei.value.exit_code == 1
 
     def test_bad_payload_json(self, state_db: Path) -> None:
@@ -222,11 +226,15 @@ class TestLogsCmd:
         )
         conn.commit()
         conn.close()
-        logs_cmd.logs("r_running", task_id=None, tail=50, follow=False)
+        logs_cmd.logs(
+            "r_running", task_id=None, tail=50, follow=False, json_output=False, limit=500
+        )
 
     def test_no_db(self, fake_home: Path) -> None:
         with pytest.raises(typer.Exit) as ei:
-            logs_cmd.logs("whatever", task_id=None, tail=50, follow=False)
+            logs_cmd.logs(
+                "whatever", task_id=None, tail=50, follow=False, json_output=False, limit=500
+            )
         assert ei.value.exit_code == 0
 
 
@@ -1251,3 +1259,93 @@ class TestArtifactsGet:
 
         artifacts_cmd.artifacts("r_done", get=True, task_id=None, output=str(tmp_path / "e3"))
         assert "missing on disk" in capsys.readouterr().out
+
+
+# -- v1.1: graceful interrupt ----------------------------------------------------
+
+
+class TestGracefulInterrupt:
+    def test_keyboard_interrupt_marks_cancelled_exit_130(
+        self,
+        fake_home: Path,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+
+        from computepilot.runtime.engine import Engine as _Engine
+
+        wf_file = tmp_path / "wf.yaml"
+        wf_file.write_text(
+            "name: slow\ntasks:\n  - id: snooze\n    command: sleep 5\n    type: shell\n"
+        )
+        monkeypatch.chdir(tmp_path)
+
+        async def interrupted_run(
+            self: object,
+            workflow: Workflow,
+            run_id: str = "",
+            config: dict | None = None,
+            **k: object,
+        ) -> object:
+            # Emulate Ctrl-C arriving right after the run row was persisted.
+            from datetime import UTC, datetime
+
+            self._state.create_run(
+                Run(
+                    id=run_id,
+                    workflow_id=workflow.id,
+                    workflow_sha256=workflow.sha256,
+                    status=RunStatus.RUNNING,
+                    created_at=datetime.now(tz=UTC),
+                )
+            )
+            raise KeyboardInterrupt
+
+        monkeypatch.setattr(_Engine, "run", interrupted_run)
+
+        with pytest.raises(typer.Exit) as ei:
+            run_cmd.run(
+                str(wf_file),
+                executor="local",
+                max_concurrency=4,
+                approve=True,
+                interactive=False,
+                from_session=None,
+                set_param=None,
+            )
+        assert ei.value.exit_code == 130
+        out = capsys.readouterr().out
+        assert "marked cancelled" in out
+        assert "cpilot resume" in out
+
+        # run persisted as CANCELLED in the state DB
+        conn = sqlite3.connect(str(fake_home / ".local/share/computepilot/state.db"))
+        row = conn.execute("SELECT status FROM runs ORDER BY created_at DESC LIMIT 1").fetchone()
+        conn.close()
+        assert row[0] == "cancelled"
+
+
+# -- v1.1: logs --json ------------------------------------------------------------
+
+
+class TestLogsJson:
+    def test_json_output(self, state_db: Path, capsys: pytest.CaptureFixture[str]) -> None:
+        logs_cmd.logs("r_running", task_id=None, tail=50, follow=False, json_output=True, limit=500)
+        data = json.loads(capsys.readouterr().out)
+        assert isinstance(data, list) and len(data) >= 2
+        assert {"task_id", "event", "at"} <= set(data[0].keys())
+
+    def test_json_task_filter(self, state_db: Path, capsys: pytest.CaptureFixture[str]) -> None:
+        logs_cmd.logs("r_running", task_id="t2", tail=50, follow=False, json_output=True, limit=500)
+        data = json.loads(capsys.readouterr().out)
+        assert all(e["task_id"] == "t2" for e in data)
+
+    def test_limit_takes_newest(self, state_db: Path, capsys: pytest.CaptureFixture[str]) -> None:
+        for i in range(5):
+            store = StateStore(state_db)
+            store.record_event("r_running", f"extra_{i}", "custom")
+            store.close()
+        logs_cmd.logs("r_running", task_id=None, tail=50, follow=False, json_output=True, limit=2)
+        data = json.loads(capsys.readouterr().out)
+        assert len(data) == 2

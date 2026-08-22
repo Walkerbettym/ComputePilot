@@ -66,6 +66,15 @@ tasks:
     type: shell
 ```
 
+参数扫描用 `foreach` 一行扇出（v1.1+）：
+
+```yaml
+tasks:
+  - id: simulate
+    foreach: { values: [10, 20, 30], as: n }
+    command: python sim.py --n ${n}
+```
+
 ### 1. 校验
 
 ```bash
@@ -186,9 +195,9 @@ CI 每次 push 自动运行上述全部检查（含 coverage ≥ 90%，当前 93
 ```python
 from computepilot import api
 
-run = api.run("workflow.yaml", params={"epochs": 50})   # 阻塞至完成
+run = api.run("workflow.yaml", params={"epochs": 50})  # 阻塞至完成
 print(run.id, run.status)
-api.verify("run_a", "run_b")     # {"reproducible": true/false, ...}
+api.verify("run_a", "run_b")  # {"reproducible": true/false, ...}
 ```
 
 支持 `run / resume / status / list_runs / artifacts / report / cancel / verify`。

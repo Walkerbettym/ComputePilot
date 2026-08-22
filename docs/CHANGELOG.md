@@ -1,5 +1,21 @@
 # Changelog
 
+## v1.1.0 (2026-08-22)
+
+表达力与韧性 — 原生参数扫描、优雅中断。
+
+### 新功能
+
+- **`foreach` 任务扇出** — 一个模板任务按 `values` 展开为 N 个实例
+  （id 为 `<base>_<i>`），`as` 变量在 command/args/env/inputs/outputs 中替换；
+  其他任务对模板 base id 的 `depends_on` 自动重写为依赖全部实例；
+  values 可引用 `--set` 参数；上限 500 实例；
+  展开顺序：includes 合并 → foreach 展开 → 参数替换 → 校验
+- **`cpilot run` 优雅中断** — Ctrl-C 不再裸崩：运行标记 CANCELLED、
+  提示 resume 命令、exit 130；已完成任务保持持久化可续跑
+- **`cpilot logs --json [--limit N]`** — 结构化事件数组输出
+- **Dashboard 运行列表状态过滤** — all/running/succeeded/failed 前端筛选
+
 ## v1.0.0 (2026-08-22)
 
 组合与稳定化 — 首个稳定版发布。

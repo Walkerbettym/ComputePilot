@@ -30,6 +30,21 @@ def substitute(value: str, params: dict[str, str]) -> str:
     return _PLACEHOLDER.sub(_sub, value)
 
 
+def substitute_partial(value: str, params: dict[str, str]) -> str:
+    """Replace known ``${key}`` occurrences; leave unknown placeholders intact."""
+
+    def _sub(match: re.Match[str]) -> str:
+        key = match.group(1)
+        default = match.group(2)
+        if key in params:
+            return params[key]
+        if default is not None:
+            return default
+        return match.group(0)
+
+    return _PLACEHOLDER.sub(_sub, value)
+
+
 def _walk(obj: Any, params: dict[str, str], missing: set[str]) -> Any:
     if isinstance(obj, str):
         try:

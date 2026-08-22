@@ -87,6 +87,17 @@ async def index() -> HTMLResponse:
     ).fetchall()
     conn.close()
 
+    body += (
+        '<div style="display:flex;gap:8px;margin:12px 0">'
+        '<button onclick="f(\'\')" class="bdg bg-ok2" style="cursor:pointer;border:0">all</button>'
+        '<button onclick="f(\'running\')" class="bdg" style="cursor:pointer;border:1px solid #30363d;background:#161b22;color:#c9d1d9">running</button>'
+        '<button onclick="f(\'succeeded\')" class="bdg" style="cursor:pointer;border:1px solid #30363d;background:#161b22;color:#c9d1d9">succeeded</button>'
+        '<button onclick="f(\'failed\')" class="bdg" style="cursor:pointer;border:1px solid #30363d;background:#161b22;color:#c9d1d9">failed</button>'
+        "</div>"
+        "<script>function f(s){"
+        "document.querySelectorAll('tr[data-status]').forEach(tr=>{"
+        "tr.style.display=(s===''||tr.dataset.status===s)?'':'none';});}</script>"
+    )
     has_run = any(r["status"] == "running" for r in rows)
     page = _pg("Dashboard", body, auto_refresh=has_run)
     page += "<table><tr><th>Run ID</th><th>Workflow</th><th>Status</th><th>Executor</th><th>Age</th></tr>"
@@ -106,7 +117,9 @@ async def index() -> HTMLResponse:
         c2 = {"succeeded": "bg-ok2", "failed": "bg-fail2", "running": "bdg"}.get(
             r["status"], "bg-ok2"
         )
-        page += f'<tr><td><a href="/run/{r["id"]}">{r["id"][:16]}</a></td>'
+        page += (
+            f'<tr data-status="{r["status"]}"><td><a href="/run/{r["id"]}">{r["id"][:16]}</a></td>'
+        )
         page += f"<td>{r['workflow_name'] or '-'}</td>"
         page += f'<td><span class="bdg {c2}">{r["status"]}</span></td>'
         page += f"<td>{r['executor']}</td><td>{age}</td></tr>"
