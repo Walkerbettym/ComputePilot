@@ -117,6 +117,13 @@ class Workflow(BaseModel):
     defaults: PartialTask | None = None
     tasks: list[Task] = Field(min_length=1)
     created_at: datetime = Field(default_factory=lambda: datetime.now(tz=UTC))
+    notifications: dict[str, Any] = Field(
+        default_factory=dict,
+        description=(
+            "Optional callbacks: {'on_failed'/'on_succeeded': {'url': ..., "
+            "'timeout': seconds}}. Engine POSTs run outcome JSON to the URL."
+        ),
+    )
 
     @field_validator("tasks")
     @classmethod

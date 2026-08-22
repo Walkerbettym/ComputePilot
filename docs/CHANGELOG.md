@@ -1,5 +1,23 @@
 # Changelog
 
+## v1.4.0 (2026-08-22)
+
+进程安全与通知 — 孤儿进程治理、并发写安全、失败回调。
+
+### 新功能
+
+- **`cpilot cancel --kill`** — 引擎 submit 后记录 `process_started` pid 事件；
+  cancel --kill 对 RUNNING 任务 SIGTERM→(0.5s)→SIGKILL 终止真实子进程后再标记 CANCELLED；
+  不加 --kill 保持旧行为
+- **Webhook 通知** — Workflow 级 `notifications.on_failed/on_succeeded.{url,timeout}`；
+  终态后 POST `{event, run_id, workflow, status}`；受 timeout 约束、异常静默不影响退出码
+
+### 修复
+
+- **并发写安全** — StateStore 增加 `PRAGMA busy_timeout=5000`；
+  此前 CLI 与 Dashboard 并发写会立刻抛 `database is locked`
+  （三线程 ×20 写入并发测试验证）
+
 ## v1.3.0 (2026-08-22)
 
 调度与运维 — 任务优先级、Prometheus 指标、模板脚手架。

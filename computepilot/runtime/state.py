@@ -77,9 +77,11 @@ class StateStore:
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
         self._conn = sqlite3.connect(str(self.db_path))
         self._conn.row_factory = sqlite3.Row
-        # WAL improves concurrent read/write (CLI + Dashboard)
+        # WAL improves concurrent read/write (CLI + Dashboard);
+        # busy_timeout lets parallel writers wait instead of raising immediately.
         with contextlib.suppress(sqlite3.DatabaseError):
             self._conn.execute("PRAGMA journal_mode=WAL")
+            self._conn.execute("PRAGMA busy_timeout=5000")
         self._conn.executescript(SCHEMA)
 
     def close(self) -> None:

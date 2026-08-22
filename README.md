@@ -160,7 +160,7 @@ cpilot report <run-id>      # 生成 report.md + manifest.json（可复现）
 | `cpilot status` | 查看运行状态 |
 | `cpilot logs` | 查看任务事件日志（`--follow` 实时跟踪） |
 | `cpilot resume` | 从检查点恢复 |
-| `cpilot cancel` | 取消运行 |
+| `cpilot cancel` | 取消运行（`--kill` 同时终止运行中的子进程） |
 | `cpilot artifacts` | 列出/导出制品（`--get` 校验 sha256） |
 | `cpilot verify` | 对比两次运行的可复现性 |
 | `cpilot report` | 生成溯源报告 |
@@ -203,6 +203,16 @@ api.verify("run_a", "run_b")  # {"reproducible": true/false, ...}
 支持 `run / resume / status / list_runs / artifacts / report / cancel / verify`。
 
 ---
+
+## 通知
+
+```yaml
+name: wf
+notifications:
+  on_failed:
+    url: https://hooks.example.com/cpilot   # 运行失败时 POST 结果 JSON
+    timeout: 5
+```
 
 ## 可观测性
 

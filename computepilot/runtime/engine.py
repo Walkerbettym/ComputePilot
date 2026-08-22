@@ -108,6 +108,9 @@ class Engine:
                     env_full = {**workflow.env, **task.environment, **(env or {})}
                     handle = await self._executor.submit(task, str(_run_dir), env_full)
                     handles[task.id] = handle
+                    pid = getattr(handle, "pid", None)
+                    if pid is not None:
+                        self._state.record_event(run.id, task.id, "process_started", {"pid": pid})
                     running_tasks[task.id] = asyncio.create_task(
                         self._poll_and_collect(task.id, handle, task)
                     )
@@ -175,6 +178,7 @@ class Engine:
 
         run.finished_at = datetime.now(tz=UTC)
         self._state.update_run_status(run.id, run.status)
+        await self._notify(workflow, run.id, run.status)
 
         return run
 
@@ -243,6 +247,9 @@ class Engine:
                         env_full,
                     )
                     handles[task.id] = handle
+                    pid = getattr(handle, "pid", None)
+                    if pid is not None:
+                        self._state.record_event(run.id, task.id, "process_started", {"pid": pid})
                     running_tasks[task.id] = asyncio.create_task(
                         self._poll_and_collect(task.id, handle, task)
                     )
@@ -306,7 +313,39 @@ class Engine:
 
         run.finished_at = datetime.now(tz=UTC)
         self._state.update_run_status(run.id, run.status)
+        await self._notify(workflow, run.id, run.status)
         return run
+
+    async def _notify(self, workflow: Workflow, run_id: str, status: RunStatus) -> None:
+        """Fire the workflow's on_success/on_failure webhook (best-effort).
+
+        Bounded by the hook's own timeout so it never stalls termination.
+        """
+        hooks = getattr(workflow, "notifications", None) or {}
+        key = "on_succeeded" if status == RunStatus.SUCCEEDED else "on_failed"
+        hook = hooks.get(key) if isinstance(hooks, dict) else None
+        if not isinstance(hook, dict) or not hook.get("url"):
+            return
+        url = str(hook["url"])
+        timeout = float(hook.get("timeout", 5))
+
+        import contextlib as _ctx
+
+        import httpx as _httpx
+
+        outcome = "succeeded" if status == RunStatus.SUCCEEDED else "failed"
+        payload = {
+            "event": f"run_{outcome}",
+            "run_id": run_id,
+            "workflow": getattr(workflow, "name", ""),
+            "status": status.value,
+        }
+
+        def _post() -> None:
+            _httpx.post(url, json=payload, timeout=timeout)
+
+        with _ctx.suppress(Exception):
+            await asyncio.to_thread(_post)
 
     # -- Internal helpers ------------------------------------------------------
 
